@@ -1406,78 +1406,87 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               ),
             ),
             const SizedBox(height: 14),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppColors.gradientSunsetAmber,
+            Material(
+              color: Colors.transparent,
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: AppColors.gradientSunsetAmber,
+                  ),
+                  child: const Icon(Icons.image_rounded, color: Colors.white, size: 20),
                 ),
-                child: const Icon(Icons.image_rounded, color: Colors.white, size: 20),
+                title: Text('Request Custom Photo',
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800)),
+                subtitle: Text('Personalized private photo for ₹200',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _msgController.text = 'Could you share an exclusive studio photo? 📸';
+                  _sendMessage();
+                },
               ),
-              title: Text('Request Custom Photo',
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800)),
-              subtitle: Text('Personalized private photo for ₹200',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 11)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _msgController.text = 'Could you share an exclusive studio photo? 📸';
-                _sendMessage();
-              },
             ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppColors.gradientRosePink,
+            Material(
+              color: Colors.transparent,
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: AppColors.gradientRosePink,
+                  ),
+                  child: const Icon(Icons.videocam_rounded, color: Colors.white, size: 20),
                 ),
-                child: const Icon(Icons.videocam_rounded, color: Colors.white, size: 20),
+                title: Text('Request Custom Video',
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800)),
+                subtitle: Text('1-minute personalized greeting for ₹400',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _msgController.text = 'Can you record a 1-minute video greeting for me? 🎥';
+                  _sendMessage();
+                },
               ),
-              title: Text('Request Custom Video',
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800)),
-              subtitle: Text('1-minute personalized greeting for ₹400',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 11)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _msgController.text = 'Can you record a 1-minute video greeting for me? 🎥';
-                _sendMessage();
-              },
             ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppColors.gradientCyberCyan,
+            Material(
+              color: Colors.transparent,
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: AppColors.gradientCyberCyan,
+                  ),
+                  child: const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 20),
                 ),
-                child: const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 20),
+                title: Text('Send Wallet Tip',
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800)),
+                subtitle: Text('Show appreciation with a instant ₹100 tip',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final wallet = WalletService.instance;
+                  if (wallet.availableBalance >= 100) {
+                    await wallet.holdForBooking(
+                      amount: 100,
+                      sessionTitle: 'Tip to ${widget.conversation['name']}',
+                    );
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            '₹100 Tip sent successfully to ${widget.conversation['name']}! 💎'),
+                        backgroundColor: const Color(0xFF0D9488),
+                      ),
+                    );
+                  } else {
+                    if (!mounted) return;
+                    AddFundsBottomSheet.show(context, initialAmount: 100);
+                  }
+                },
               ),
-              title: Text('Send Wallet Tip',
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800)),
-              subtitle: Text('Show appreciation with a instant ₹100 tip',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 11)),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final wallet = WalletService.instance;
-                if (wallet.availableBalance >= 100) {
-                  await wallet.holdForBooking(
-                    amount: 100,
-                    sessionTitle: 'Tip to ${widget.conversation['name']}',
-                  );
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          '₹100 Tip sent successfully to ${widget.conversation['name']}! 💎'),
-                      backgroundColor: const Color(0xFF0D9488),
-                    ),
-                  );
-                } else {
-                  if (!mounted) return;
-                  AddFundsBottomSheet.show(context, initialAmount: 100);
-                }
-              },
             ),
           ],
         ),

@@ -493,56 +493,59 @@ class _PrivacySafetySectionState extends State<PrivacySafetySection> {
           child: Column(
             children: [
               // Hide Online Status
-              SwitchListTile.adaptive(
-                value: _hideOnlineStatus,
-                onChanged: (val) {
-                  setState(() => _hideOnlineStatus = val);
-                  ScaffoldMessenger.of(context).clearSnackBars();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        val
-                            ? 'Stealth Mode ON: Your online status is now hidden from everyone.'
-                            : 'Online status is visible to active matches and creators.',
+              Material(
+                color: Colors.transparent,
+                child: SwitchListTile.adaptive(
+                  value: _hideOnlineStatus,
+                  onChanged: (val) {
+                    setState(() => _hideOnlineStatus = val);
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          val
+                              ? 'Stealth Mode ON: Your online status is now hidden from everyone.'
+                              : 'Online status is visible to active matches and creators.',
+                        ),
+                        backgroundColor: AppColors.pineDark,
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 2),
                       ),
-                      backgroundColor: AppColors.pineDark,
-                      behavior: SnackBarBehavior.floating,
-                      duration: const Duration(seconds: 2),
+                    );
+                  },
+                  activeTrackColor: const Color(0xFF0284C7),
+                  title: Text(
+                    'Hide Online Status',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.pineDark,
                     ),
-                  );
-                },
-                activeTrackColor: const Color(0xFF0284C7),
-                title: Text(
-                  'Hide Online Status',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.pineDark,
                   ),
-                ),
-                subtitle: Text(
-                  'When enabled, creators cannot see when you are active on Trylo.',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11.5,
-                    color: AppColors.textSecondary,
+                  subtitle: Text(
+                    'When enabled, creators cannot see when you are active on Trylo.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11.5,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
-                secondary: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: _hideOnlineStatus
-                        ? const Color(0xFFE0F2FE)
-                        : const Color(0xFFF1F7F5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    _hideOnlineStatus
-                        ? Icons.visibility_off_rounded
-                        : Icons.visibility_rounded,
-                    color: _hideOnlineStatus
-                        ? const Color(0xFF0284C7)
-                        : AppColors.pineDark,
-                    size: 18,
+                  secondary: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _hideOnlineStatus
+                          ? const Color(0xFFE0F2FE)
+                          : const Color(0xFFF1F7F5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _hideOnlineStatus
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                      color: _hideOnlineStatus
+                          ? const Color(0xFF0284C7)
+                          : AppColors.pineDark,
+                      size: 18,
+                    ),
                   ),
                 ),
               ),
@@ -553,35 +556,38 @@ class _PrivacySafetySectionState extends State<PrivacySafetySection> {
                   color: AppColors.borderLight),
 
               // Read Receipts
-              SwitchListTile.adaptive(
-                value: _readReceipts,
-                onChanged: (val) => setState(() => _readReceipts = val),
-                activeTrackColor: const Color(0xFF0284C7),
-                title: Text(
-                  'Message Read Receipts',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.pineDark,
+              Material(
+                color: Colors.transparent,
+                child: SwitchListTile.adaptive(
+                  value: _readReceipts,
+                  onChanged: (val) => setState(() => _readReceipts = val),
+                  activeTrackColor: const Color(0xFF0284C7),
+                  title: Text(
+                    'Message Read Receipts',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.pineDark,
+                    ),
                   ),
-                ),
-                subtitle: Text(
-                  'Shows double blue checkmarks when you have read direct chat messages.',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11.5,
-                    color: AppColors.textSecondary,
+                  subtitle: Text(
+                    'Shows double blue checkmarks when you have read direct chat messages.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11.5,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
-                secondary: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF1F7F5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.done_all_rounded,
-                    color: AppColors.pineDark,
-                    size: 18,
+                  secondary: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF1F7F5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.done_all_rounded,
+                      color: AppColors.pineDark,
+                      size: 18,
+                    ),
                   ),
                 ),
               ),
@@ -592,35 +598,38 @@ class _PrivacySafetySectionState extends State<PrivacySafetySection> {
                   color: AppColors.borderLight),
 
               // Incognito Story Browsing
-              SwitchListTile.adaptive(
-                value: _stealthStoryView,
-                onChanged: (val) => setState(() => _stealthStoryView = val),
-                activeTrackColor: const Color(0xFF0284C7),
-                title: Text(
-                  'Incognito Story Browsing',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.pineDark,
+              Material(
+                color: Colors.transparent,
+                child: SwitchListTile.adaptive(
+                  value: _stealthStoryView,
+                  onChanged: (val) => setState(() => _stealthStoryView = val),
+                  activeTrackColor: const Color(0xFF0284C7),
+                  title: Text(
+                    'Incognito Story Browsing',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.pineDark,
+                    ),
                   ),
-                ),
-                subtitle: Text(
-                  'View creator stories without your name appearing in viewer list.',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11.5,
-                    color: AppColors.textSecondary,
+                  subtitle: Text(
+                    'View creator stories without your name appearing in viewer list.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11.5,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
-                secondary: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF1F7F5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.auto_awesome_rounded,
-                    color: AppColors.pineDark,
-                    size: 18,
+                  secondary: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF1F7F5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.auto_awesome_rounded,
+                      color: AppColors.pineDark,
+                      size: 18,
+                    ),
                   ),
                 ),
               ),
@@ -1345,7 +1354,9 @@ class _NotificationPreferencesSectionState
           ),
         ],
       ),
-      child: Column(children: children),
+      child: Column(
+        children: children.map((child) => Material(color: Colors.transparent, child: child)).toList(),
+      ),
     );
   }
 }

@@ -541,31 +541,34 @@ class ProfileSelfScreen extends StatelessWidget {
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isDestructive
-              ? const Color(0xFFFFECEF)
-              : AppColors.iceMint.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(10),
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isDestructive
+                ? const Color(0xFFFFECEF)
+                : AppColors.iceMint.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: isDestructive ? const Color(0xFFE53935) : AppColors.pineDark,
+          ),
         ),
-        child: Icon(
-          icon,
-          size: 18,
-          color: isDestructive ? const Color(0xFFE53935) : AppColors.pineDark,
+        title: Text(
+          title,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: isDestructive ? const Color(0xFFE53935) : AppColors.pineDark,
+          ),
         ),
+        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textMuted),
+        onTap: onTap,
       ),
-      title: Text(
-        title,
-        style: GoogleFonts.plusJakartaSans(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: isDestructive ? const Color(0xFFE53935) : AppColors.pineDark,
-        ),
-      ),
-      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textMuted),
-      onTap: onTap,
     );
   }
 

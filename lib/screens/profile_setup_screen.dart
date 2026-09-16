@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../core/constants/app_colors.dart';
 import '../core/models/user_profile_model.dart';
 import '../core/services/user_profile_service.dart';
+import '../core/services/api_service.dart';
 import 'main_navigation_screen.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
@@ -185,54 +186,60 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.iceMint,
-                    borderRadius: BorderRadius.circular(12),
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.iceMint,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: AppColors.pineDark,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.camera_alt_rounded,
-                    color: AppColors.pineDark,
+                  title: Text(
+                    'Take Photo with Camera',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.pineDark,
+                    ),
                   ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickAvatar(ImageSource.camera);
+                  },
                 ),
-                title: Text(
-                  'Take Photo with Camera',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.pineDark,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickAvatar(ImageSource.camera);
-                },
               ),
               const SizedBox(height: 8),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.iceMint,
-                    borderRadius: BorderRadius.circular(12),
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.iceMint,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.photo_library_rounded,
+                      color: AppColors.pineDark,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.photo_library_rounded,
-                    color: AppColors.pineDark,
+                  title: Text(
+                    'Choose from Gallery',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.pineDark,
+                    ),
                   ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickAvatar(ImageSource.gallery);
+                  },
                 ),
-                title: Text(
-                  'Choose from Gallery',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.pineDark,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickAvatar(ImageSource.gallery);
-                },
               ),
             ],
           ),
@@ -450,6 +457,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       );
 
       await UserProfileService.instance.saveProfile(updatedProfile);
+
+      final createdUser = await ApiService.createUser(updatedProfile);
+      if (createdUser != null && createdUser.mysqlId != null) {
+        await UserProfileService.instance.saveProfile(createdUser);
+        debugPrint('MySQL user ID saved: ${createdUser.mysqlId}');
+      } else {
+        debugPrint('Warning: Failed to sync user to MySQL backend');
+      }
 
       if (!mounted) return;
 

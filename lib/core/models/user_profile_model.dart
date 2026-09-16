@@ -1,5 +1,6 @@
 class UserProfileModel {
   final String id;
+  final int? mysqlId;
   final String name;
   final String? avatarPath;
   final List<String> galleryPaths;
@@ -15,6 +16,7 @@ class UserProfileModel {
 
   const UserProfileModel({
     required this.id,
+    this.mysqlId,
     required this.name,
     this.avatarPath,
     this.galleryPaths = const [],
@@ -41,6 +43,7 @@ class UserProfileModel {
 
   UserProfileModel copyWith({
     String? id,
+    int? mysqlId,
     String? name,
     String? avatarPath,
     List<String>? galleryPaths,
@@ -56,6 +59,7 @@ class UserProfileModel {
   }) {
     return UserProfileModel(
       id: id ?? this.id,
+      mysqlId: mysqlId ?? this.mysqlId,
       name: name ?? this.name,
       avatarPath: avatarPath ?? this.avatarPath,
       galleryPaths: galleryPaths ?? this.galleryPaths,
@@ -74,6 +78,7 @@ class UserProfileModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'mysqlId': mysqlId,
       'name': name,
       'avatarPath': avatarPath,
       'galleryPaths': galleryPaths,
@@ -97,6 +102,7 @@ class UserProfileModel {
 
     return UserProfileModel(
       id: json['id'] as String? ?? '',
+      mysqlId: json['mysqlId'] as int?,
       name: json['name'] as String? ?? '',
       avatarPath: json['avatarPath'] as String?,
       galleryPaths: (json['galleryPaths'] as List<dynamic>?)
@@ -124,6 +130,7 @@ class UserProfileModel {
   static UserProfileModel defaultProfile() {
     return const UserProfileModel(
       id: 'default_user',
+      mysqlId: null,
       name: 'Alex Morgan',
       avatarPath: null,
       galleryPaths: [],
