@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  CREATOR
+  ADMIN
+}
+
+enum CallType {
+  VOICE
+  VIDEO
+}
+
+enum CallStatus {
+  INITIATED
+  RINGING
+  CONNECTED
+  COMPLETED
+  MISSED
+  REJECTED
+  FAILED
+}
+
+enum TransactionType {
+  PURCHASE
+  CALL_USAGE
+  PHOTO_PURCHASE
+  REFUND
+  SESSION_HOLD
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  REVERTED
+}
+
+model User {
+  id           String        @id @default(uuid()) @db.Uuid
+  phone        String?       @unique
+  email        String?       @unique
+  passwordHash String?
+  role         Role          @default(USER)
+  isVerified   Boolean       @default(false)
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  profile      UserProfile?
+  creator      Creator?
+  wallet       Wallet?
+  outgoingCalls CallSession[] @relation("CallerUser")
+  sentMessages  ChatMessage[] @relation("SentMessages")
+  receivedMessages ChatMessage[] @relation("ReceivedMessages")
+
+  @@map("users")
+}
+
+model UserProfile {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @unique @db.Uuid
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String   @default("")
+  bio            String   @default("")
+  city           String   @default("")
+  state          String   @default("")
+  country        String   @default("India")
+  avatarUrl      String   @default("")
+  galleryPhotos  String[] @default([])
+  interests      String[] @default([])
+  languages      String[] @default([])
+  isCompleted    Boolean  @default(false)
+  currentStep    Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("user_profiles")
+}
+
+model Creator {
+  id                 String        @id @default(uuid()) @db.Uuid
+  userId             String        @unique @db.Uuid
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier               String        @default("VIP")
+  isOnline           Boolean       @default(true)
+  isAvailable        Boolean       @default(true)
+  videoCallPrice     Int           @default(500)
+  voiceCallPrice     Int           @default(300)
+  photoPrice         Int           @default(200)
+  videoGreetingPrice Int           @default(400)
+  rating             Decimal       @default(4.9) @db.Decimal(3, 2)
+  reviewCount        Int           @default(128)
+  profession         String        @default("Fashion Designer")
+  followers          String        @default("128K")
+  responseTime       String        @default("Under 5m")
+  tags               String[]      @default(["Fashion", "PastelAesthetic", "Coffee", "Art"])
+  languages          String[]      @default(["English", "Tamil", "Hindi"])
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  incomingCalls      CallSession[] @relation("CreatorCalls")
+
+  @@map("creators")
+}
+
+model Wallet {
+  id              String              @id @default(uuid()) @db.Uuid
+  userId          String              @unique @db.Uuid
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance         Int                 @default(0)
+  reservedBalance Int                 @default(0)
+  version         Int                 @default(0)
+  isFrozen        Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  transactions    WalletTransaction[]
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id           String            @id @default(uuid()) @db.Uuid
+  walletId     String            @db.Uuid
+  wallet       Wallet            @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type         TransactionType   @default(PURCHASE)
+  coins        Int
+  amountInr    Decimal?          @db.Decimal(10, 2)
+  balanceAfter Int
+  status       TransactionStatus @default(COMPLETED)
+  referenceId  String?
+  description  String            @default("")
+  createdAt    DateTime          @default(now())
+
+  @@index([walletId])
+  @@map("wallet_transactions")
+}
+
+model CallSession {
+  id           String     @id @default(uuid()) @db.Uuid
+  callerId     String     @db.Uuid
+  caller       User       @relation("CallerUser", fields: [callerId], references: [id])
+  creatorId    String     @db.Uuid
+  creator      Creator    @relation("CreatorCalls", fields: [creatorId], references: [id])
+  callType     CallType   @default(VIDEO)
+  ratePerMin   Int        @default(500)
+  status       CallStatus @default(INITIATED)
+  startedAt    DateTime?
+  endedAt      DateTime?
+  durationSecs Int        @default(0)
+  totalCoins   Int        @default(0)
+  agoraChannel String     @unique
+  endReason    String?
+  createdAt    DateTime   @default(now())
+
+  @@index([callerId])
+  @@index([creatorId])
+  @@map("call_sessions")
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid()) @db.Uuid
+  senderId    String   @db.Uuid
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId  String   @db.Uuid
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  contentType String   @default("TEXT")
+  textBody    String?
+  mediaUrl    String?
+  isLocked    Boolean  @default(false)
+  unlockPrice Int      @default(0)
+  isUnlocked  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([senderId, receiverId])
+  @@map("chat_messages")
+}
+
+model AdminSetting {
+  id                       Int      @id @default(1)
+  isFreezeBalance          Boolean  @default(false)
+  isVideoConnectionEnabled Boolean  @default(true)
+  paymentUpiId             String   @default("linkup@ybl")
+  updatedAt                DateTime @updatedAt
+
+  @@map("admin_settings")
+}
+

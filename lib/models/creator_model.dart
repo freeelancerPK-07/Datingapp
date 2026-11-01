@@ -48,4 +48,32 @@ class CreatorModel {
     this.voiceCallPrice = 300,
     this.videoCallPrice = 500,
   });
+
+  factory CreatorModel.fromJson(Map<String, dynamic> json) {
+    return CreatorModel(
+      id: json['id'] ?? '',
+      name: json['name'] ?? 'Creator',
+      age: json['age'] ?? 23,
+      photoUrl: json['photoUrl'] ?? '',
+      isOnline: json['isOnline'] ?? true,
+      isVerified: json['isVerified'] ?? true,
+      isActive: json['isActive'] ?? true,
+      bio: json['bio'] ?? '',
+      diamondsPerMin: json['diamondsPerMin'] ?? json['videoCallPrice'] ?? 50,
+      location: json['location'] ?? 'Mumbai, India',
+      tags: json['tags'] != null ? List<String>.from(json['tags']) : const ['Fashion', 'Lifestyle'],
+      languages: json['languages'] != null ? List<String>.from(json['languages']) : const ['English', 'Hindi'],
+      rating: (json['rating'] is num) ? (json['rating'] as num).toDouble() : 4.9,
+      reviewCount: json['reviewCount'] ?? 100,
+      statusText: (json['isOnline'] == true) ? 'Online' : 'Offline',
+      profession: json['profession'] ?? 'Creator',
+      followers: json['followers'] ?? '100K',
+      responseTime: json['responseTime'] ?? 'Under 5m',
+      tier: json['tier'] ?? 'VIP',
+      photoPrice: json['photoPrice'] ?? 200,
+      videoGreetingPrice: json['videoGreetingPrice'] ?? 400,
+      voiceCallPrice: json['voiceCallPrice'] ?? 300,
+      videoCallPrice: json['videoCallPrice'] ?? 500,
+    );
+  }
 }

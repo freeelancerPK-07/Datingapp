@@ -4,6 +4,7 @@ import 'package:version1/models/call_record_model.dart';
 import 'package:version1/models/creator_model.dart';
 import 'package:version1/models/user_profile_model.dart';
 import 'package:version1/models/wallet_model.dart';
+import 'package:version1/services/api_service.dart';
 
 class CallCheckResult {
   final bool isAllowed;
@@ -22,6 +23,37 @@ class AppState extends ChangeNotifier {
   factory AppState() => instance;
   AppState._internal() {
     _initSampleCreators();
+    syncCreatorsFromBackend();
+  }
+
+  String? _backendUserId;
+  String? get backendUserId => _backendUserId;
+
+  void setBackendUserId(String id) {
+    _backendUserId = id;
+    syncWalletFromBackend();
+  }
+
+  Future<void> syncCreatorsFromBackend() async {
+    try {
+      final live = await ApiService.instance.fetchCreators();
+      if (live.isNotEmpty) {
+        _allCreators.clear();
+        _allCreators.addAll(live);
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> syncWalletFromBackend() async {
+    if (_backendUserId == null) return;
+    try {
+      final bal = await ApiService.instance.fetchWalletBalance(_backendUserId!);
+      if (bal != null) {
+        _availableCoins = bal;
+        notifyListeners();
+      }
+    } catch (_) {}
   }
 
   // User Profile & Onboarding State
@@ -66,6 +98,22 @@ class AppState extends ChangeNotifier {
     _userCity = '${_userProfile.city}, ${_userProfile.state}';
     _userBio = _userProfile.bio;
     notifyListeners();
+
+    if (_backendUserId != null) {
+      ApiService.instance.syncProfileOnboarding(_backendUserId!, {
+        'name': _userProfile.name,
+        'bio': _userProfile.bio,
+        'city': _userProfile.city,
+        'state': _userProfile.state,
+        'country': _userProfile.country,
+        'avatarUrl': _userProfile.photoUrl,
+        'galleryPhotos': _userProfile.galleryPhotos,
+        'interests': _userProfile.interests,
+        'languages': _userProfile.languages,
+        'isCompleted': true,
+        'currentStep': 10,
+      });
+    }
   }
 
   void setProfileCompleted(bool completed) {
@@ -677,6 +725,14 @@ class AppState extends ChangeNotifier {
     );
 
     notifyListeners();
+
+    if (_backendUserId != null) {
+      ApiService.instance.rechargeWallet(
+        userId: _backendUserId!,
+        coins: package.coins,
+        amountInr: package.priceInr.toDouble(),
+      );
+    }
     return true;
   }
 

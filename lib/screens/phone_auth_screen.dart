@@ -7,6 +7,7 @@ import 'package:version1/screens/home_screen.dart';
 import 'package:version1/screens/profile_setup_screen.dart';
 import 'package:version1/screens/signup_screen.dart';
 import 'package:version1/services/app_state.dart';
+import 'package:version1/services/api_service.dart';
 
 /// Supported Country definition for phone verification
 class CountryItem {
@@ -153,7 +154,8 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
     });
 
     try {
-      await Future.delayed(const Duration(milliseconds: 700));
+      final phone = '${_selectedCountry.dialCode}${_phoneController.text.trim()}';
+      await ApiService.instance.sendPhoneOtp(phone);
 
       if (!mounted) return;
 
@@ -276,10 +278,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
     });
 
     try {
-      await Future.delayed(const Duration(milliseconds: 700));
-
-      if (!mounted) return;
-
+      final phone = '${_selectedCountry.dialCode}${_phoneController.text.trim()}';
       final otp = _enteredOtp;
 
       if (otp.length != 6) {
@@ -289,6 +288,16 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         });
         return;
       }
+
+      final res = await ApiService.instance.verifyPhoneOtp(phone, otp);
+      if (res['success'] == true && res['user'] != null) {
+        final userId = res['user']['id'];
+        if (userId != null) {
+          AppState.instance.setBackendUserId(userId.toString());
+        }
+      }
+
+      if (!mounted) return;
 
       setState(() {
         _isVerifyingOtp = false;
