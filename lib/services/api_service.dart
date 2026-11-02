@@ -191,6 +191,9 @@ class ApiService {
     int voiceCallPrice = 300,
     int photoPrice = 200,
     String? bio,
+    List<String>? tags,
+    List<String>? languages,
+    String tier = 'VIP',
   }) async {
     try {
       final res = await http.post(
@@ -203,6 +206,9 @@ class ApiService {
           'voiceCallPrice': voiceCallPrice,
           'photoPrice': photoPrice,
           'bio': bio,
+          'tags': tags ?? ['Creator', 'Lifestyle'],
+          'languages': languages ?? ['English', 'Tamil'],
+          'tier': tier,
         }),
       );
       return res.statusCode == 200;

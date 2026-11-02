@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/models/call_record_model.dart';
@@ -441,7 +441,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  '⚡ Recharge',
+                                  'Recharge',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w800,
@@ -950,10 +950,10 @@ class _PostCallReviewSheetState extends State<_PostCallReviewSheet> {
               runSpacing: 6,
               alignment: WrapAlignment.center,
               children: [
-                'Super Friendly 😊',
-                'Great Advice 💡',
-                'High Quality 🌟',
-                'Quick Response ⚡',
+                'Super Friendly',
+                'Great Advice',
+                'High Quality',
+                'Quick Response',
               ].map((chip) {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

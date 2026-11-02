@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/models/creator_model.dart';
@@ -91,7 +91,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       setState(() => _isTyping = false);
       AppState.instance.addMessage(
         convId: widget.conversationId,
-        text: 'Thanks for reaching out! Looking forward to connecting with you on call 💖',
+        text: 'Thanks for reaching out! Looking forward to connecting with you on call ',
         isMe: false,
       );
       _scrollToBottom();
@@ -122,7 +122,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Row(
               children: [
-                const Text('💎', style: TextStyle(fontSize: 22)),
+                const Icon(Icons.monetization_on_rounded, color: Color(0xFF007A78), size: 22),
                 const SizedBox(width: 8),
                 Text(
                   'Insufficient Diamonds',
@@ -249,7 +249,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       Text(
                         _isTyping
                             ? 'Typing...'
-                            : (widget.creator.isOnline ? 'Online • 💎 ${widget.creator.diamondsPerMin}/m' : 'Offline'),
+                            : (widget.creator.isOnline ? 'Online • ${widget.creator.diamondsPerMin}/m' : 'Offline'),
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -304,7 +304,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                           border: Border.all(color: const Color(0xFFFDE1EE)),
                         ),
                         child: Text(
-                          '💎 ${appState.diamondBalance}',
+                          '${appState.diamondBalance}',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,

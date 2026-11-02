@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -138,7 +138,7 @@ class _CreatorDetailScreenState extends State<CreatorDetailScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Text('👑', style: TextStyle(fontSize: 24)),
+                const Icon(Icons.monetization_on_rounded, color: Color(0xFF007A78), size: 24),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -400,7 +400,7 @@ class _CreatorDetailScreenState extends State<CreatorDetailScreen> {
           // Top Floating Navigation Bar (Back, Favorite, Share)
           _buildTopBar(topPadding),
 
-          // Bottom Action Bar: "⚡ Book Service • From ₹200"
+          // Bottom Action Bar: " Book Service • From ₹200"
           _buildBottomBar(bottomPadding),
         ],
       ),
@@ -569,7 +569,7 @@ class _CreatorDetailScreenState extends State<CreatorDetailScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        isFav ? 'Added to favorites ❤️' : 'Removed from favorites',
+                        isFav ? 'Added to favorites' : 'Removed from favorites',
                         style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
                       ),
                       backgroundColor: LinkUpTheme.darkSlate,
@@ -738,7 +738,7 @@ class _CreatorDetailScreenState extends State<CreatorDetailScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('👑', style: TextStyle(fontSize: 10)),
+                const Icon(Icons.monetization_on_rounded, color: Color(0xFF007A78), size: 10),
                 const SizedBox(width: 4),
                 Text(
                   widget.creator.tier,
@@ -1098,7 +1098,7 @@ class _CreatorDetailScreenState extends State<CreatorDetailScreen> {
     );
   }
 
-  // Bottom Sticky Action Bar: Chat + "⚡ Book Video Call • ₹500"
+  // Bottom Sticky Action Bar: Chat + " Book Video Call • ₹500"
   Widget _buildBottomBar(double bottomPadding) {
     return Positioned(
       left: 0,
@@ -1950,7 +1950,7 @@ class _BookingFlowModalState extends State<_BookingFlowModal>
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      isSufficient ? 'Ready to Book ✓' : 'Insufficient Coins ⚠️',
+                      isSufficient ? 'Ready to Book ' : 'Insufficient Coins',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,

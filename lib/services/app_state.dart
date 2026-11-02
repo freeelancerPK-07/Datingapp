@@ -127,6 +127,9 @@ class AppState extends ChangeNotifier {
     int voiceCallPrice = 300,
     int photoPrice = 200,
     String? bio,
+    List<String>? tags,
+    List<String>? languages,
+    String tier = 'VIP',
   }) async {
     if (_backendUserId == null) return false;
     final success = await ApiService.instance.registerAsCreator(
@@ -136,6 +139,9 @@ class AppState extends ChangeNotifier {
       voiceCallPrice: voiceCallPrice,
       photoPrice: photoPrice,
       bio: bio ?? _userProfile.bio,
+      tags: tags,
+      languages: languages,
+      tier: tier,
     );
     if (success) {
       _isCreator = true;

@@ -1,7 +1,8 @@
-import 'package:flutter/cupertino.dart';
+﻿import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/constants/svg_assets.dart';
+import 'package:version1/screens/become_creator_screen.dart';
 import 'package:version1/screens/edit_profile_screen.dart';
 import 'package:version1/screens/recharge_packages_sheet.dart';
 import 'package:version1/screens/welcome_screen.dart';
@@ -27,177 +28,11 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
     );
   }
 
-  void _showBecomeCreatorSheet(BuildContext context, AppState appState) {
-    final professionCtrl = TextEditingController(text: 'Dancer & Creator');
-    final priceCtrl = TextEditingController(text: '500');
-    final bioCtrl = TextEditingController(text: appState.userBio);
-    bool isLoading = false;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setSheetState) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 44,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE5E7EB),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        gradient: LinkUpTheme.primaryGradient,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(Icons.star_rounded, color: Colors.white, size: 24),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Become a LinkUp Creator',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF0F2B32),
-                            ),
-                          ),
-                          Text(
-                            'Share your talent and earn real coins on live calls',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              color: const Color(0xFF6B7280),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Profession / Headline',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF374151),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: professionCtrl,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. Fitness Coach, Musician, Model',
-                    filled: true,
-                    fillColor: const Color(0xFFF9FAFB),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  'Video Call Rate (Coins / Minute)',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF374151),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: priceCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. 500',
-                    prefixIcon: const Icon(Icons.monetization_on_rounded, color: Color(0xFF007A78)),
-                    filled: true,
-                    fillColor: const Color(0xFFF9FAFB),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: isLoading
-                        ? null
-                        : () async {
-                            final prof = professionCtrl.text.trim();
-                            final rate = int.tryParse(priceCtrl.text.trim()) ?? 500;
-                            if (prof.isEmpty) return;
-
-                            setSheetState(() => isLoading = true);
-                            final success = await appState.becomeCreator(
-                              profession: prof,
-                              videoCallPrice: rate,
-                              bio: bioCtrl.text.trim(),
-                            );
-                            setSheetState(() => isLoading = false);
-
-                            if (context.mounted) {
-                              Navigator.pop(ctx);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    success
-                                        ? '🎉 Congratulations! You are now a live Creator on LinkUp!'
-                                        : 'Could not register as creator. Make sure you are logged in.',
-                                  ),
-                                  backgroundColor: success ? const Color(0xFF007A78) : Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF007A78),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : Text(
-                            'Activate Creator Profile',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+  void _navigateToBecomeCreator() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const BecomeCreatorScreen(),
       ),
     );
   }
@@ -426,7 +261,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Photo captured and added to gallery! 📸',
+                          'Photo captured and added to gallery.',
                           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
                         ),
                         backgroundColor: const Color(0xFF007A78),
@@ -463,7 +298,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Photo selected and added to gallery! 🖼️',
+                          'Photo selected and added to gallery.',
                           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
                         ),
                         backgroundColor: const Color(0xFF007A78),
@@ -1295,7 +1130,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                         ),
                       ),
                       child: Text(
-                        isOnlineHidden ? '🔒 Status Hidden (Private)' : '● Active now',
+                        isOnlineHidden ? 'Status Hidden (Private)' : '● Active now',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -1336,7 +1171,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                           SizedBox(
                             height: 38,
                             child: ElevatedButton.icon(
-                              onPressed: () => _showBecomeCreatorSheet(context, appState),
+                              onPressed: _navigateToBecomeCreator,
                               icon: const Icon(Icons.star_rounded, size: 16, color: Colors.white),
                               label: Text(
                                 'Become Creator',
@@ -1621,7 +1456,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  '★ MAIN',
+                                  'MAIN',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 9,
                                     fontWeight: FontWeight.w900,
@@ -1758,7 +1593,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                               border: Border.all(color: const Color(0xFFCEF1EB)),
                             ),
                             child: Text(
-                              '🛡️ Verified Community Member',
+                              ' Verified Community Member',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(

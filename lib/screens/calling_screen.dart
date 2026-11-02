@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/models/call_record_model.dart';
@@ -263,7 +263,7 @@ class _CallingScreenState extends State<CallingScreen>
 
                   // Call in-progress rate info
                   Text(
-                    'Rate: 💎 ${creator.diamondsPerMin} / minute',
+                    'Rate: ${creator.diamondsPerMin} / minute',
                     style: GoogleFonts.plusJakartaSans(
                       color: Colors.white70,
                       fontSize: 13,

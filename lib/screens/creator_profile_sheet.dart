@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/constants/svg_assets.dart';
@@ -57,7 +57,7 @@ class _CreatorProfileSheetState extends State<CreatorProfileSheet> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
             title: Row(
               children: const [
-                Text('💎 '),
+                Icon(Icons.monetization_on_rounded, color: Color(0xFF007A78), size: 20),
                 Text('Low Diamond Balance'),
               ],
             ),
@@ -74,7 +74,7 @@ class _CreatorProfileSheetState extends State<CreatorProfileSheet> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Required: ${widget.creator.diamondsPerMin} 💎 / min\nYour Balance: ${appState.diamondBalance} 💎',
+                  'Required: ${widget.creator.diamondsPerMin} / min\nYour Balance: ${appState.diamondBalance}',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
@@ -263,7 +263,7 @@ class _CreatorProfileSheetState extends State<CreatorProfileSheet> {
                         border: Border.all(color: const Color(0xFFFDE1EE)),
                       ),
                       child: Text(
-                        '💎 ${creator.diamondsPerMin} Diamonds / min',
+                        '${creator.diamondsPerMin} Coins / min',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700,
@@ -398,7 +398,7 @@ class _CreatorProfileSheetState extends State<CreatorProfileSheet> {
                       size: 22,
                     ),
                     label: Text(
-                      'Video Call (${creator.diamondsPerMin} 💎)',
+                      'Video Call (${creator.diamondsPerMin})',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w700,
@@ -547,7 +547,7 @@ class _LiveVideoCallDialogState extends State<_LiveVideoCallDialog> {
                             border: Border.all(color: Colors.white24),
                           ),
                           child: Text(
-                            '💎 ${appState.diamondBalance}',
+                            '${appState.diamondBalance}',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,

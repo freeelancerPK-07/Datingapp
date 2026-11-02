@@ -60,24 +60,24 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   ];
 
 
-  // Available Interests with Emojis
+  // Available Interests
   final List<Map<String, String>> _kAllInterests = const [
-    {'title': 'Music', 'icon': '🎵'},
-    {'title': 'Dance', 'icon': '💃'},
-    {'title': 'Travel', 'icon': '✈️'},
-    {'title': 'Movies', 'icon': '🍿'},
-    {'title': 'Gaming', 'icon': '🎮'},
-    {'title': 'Fitness', 'icon': '🏋️'},
-    {'title': 'Food', 'icon': '🍴'},
-    {'title': 'Photography', 'icon': '📷'},
-    {'title': 'Reading', 'icon': '📖'},
-    {'title': 'Animals', 'icon': '🐾'},
-    {'title': 'Nature', 'icon': '🍃'},
-    {'title': 'Art', 'icon': '🎨'},
-    {'title': 'Tech', 'icon': '💻'},
-    {'title': 'Coffee', 'icon': '☕'},
-    {'title': 'Sports', 'icon': '⚽'},
-    {'title': 'Yoga', 'icon': '🧘'},
+    {'title': 'Music', 'icon': ''},
+    {'title': 'Dance', 'icon': ''},
+    {'title': 'Travel', 'icon': ''},
+    {'title': 'Movies', 'icon': ''},
+    {'title': 'Gaming', 'icon': ''},
+    {'title': 'Fitness', 'icon': ''},
+    {'title': 'Food', 'icon': ''},
+    {'title': 'Photography', 'icon': ''},
+    {'title': 'Reading', 'icon': ''},
+    {'title': 'Animals', 'icon': ''},
+    {'title': 'Nature', 'icon': ''},
+    {'title': 'Art', 'icon': ''},
+    {'title': 'Tech', 'icon': ''},
+    {'title': 'Coffee', 'icon': ''},
+    {'title': 'Sports', 'icon': ''},
+    {'title': 'Yoga', 'icon': ''},
   ];
 
   // Available Languages
@@ -954,7 +954,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isCamera ? 'Photo captured with Camera! 📸' : 'Photo selected from Gallery! 🖼️',
+            isCamera ? 'Photo captured with Camera.' : 'Photo selected from Gallery.',
             style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
           ),
           duration: const Duration(seconds: 1),
@@ -1068,7 +1068,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             alignment: WrapAlignment.center,
             children: _kAllInterests.map((item) {
               final title = item['title']!;
-              final icon = item['icon']!;
               final isSelected = _selectedInterests.contains(title);
 
               return InkWell(
@@ -1113,20 +1112,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       ),
                     ],
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(icon, style: const TextStyle(fontSize: 15)),
-                      const SizedBox(width: 6),
-                      Text(
-                        title,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          color: isSelected ? Colors.white : const Color(0xFF1E293B),
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    title,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                    ),
                   ),
                 ),
               );

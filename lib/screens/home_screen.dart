@@ -5,11 +5,11 @@ import 'package:version1/constants/app_icon_base64.dart';
 import 'package:version1/constants/svg_assets.dart';
 import 'package:version1/models/creator_model.dart';
 import 'package:version1/screens/active_call_screen.dart';
+import 'package:version1/screens/become_creator_screen.dart';
 import 'package:version1/screens/creator_detail_screen.dart';
 import 'package:version1/screens/creator_profile_sheet.dart';
 import 'package:version1/screens/liked_saved_screen.dart';
 import 'package:version1/screens/profile_self_screen.dart';
-import 'package:version1/screens/profile_setup_screen.dart';
 import 'package:version1/screens/recharge_packages_sheet.dart';
 import 'package:version1/screens/video_calls_screen.dart';
 import 'package:version1/screens/wallet_screen.dart';
@@ -97,13 +97,10 @@ class _HomeScreenState extends State<HomeScreen> {
     };
   }
 
-  late final List<Map<String, dynamic>> _creators;
-
   @override
   void initState() {
     super.initState();
     AppState.instance.syncCreatorsFromBackend();
-    _creators = [];
   }
 
 
@@ -714,7 +711,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          isSaved ? 'Saved to bookmarks ❤️' : 'Removed from bookmarks',
+          isSaved ? 'Saved to bookmarks' : 'Removed from bookmarks',
           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
         ),
         backgroundColor: LinkUpTheme.darkSlate,
@@ -764,292 +761,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ==========================================
-  // PROFILE INCOMPLETE GATE BANNER (Placed directly below top hero box widget)
-  // ==========================================
-  Widget _buildProfileCompletionBanner(BuildContext context, AppState appState) {
-    final int step = appState.userProfile.currentStep;
-    final double percent = ((step / 10) * 100).clamp(10, 100);
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFCEF1EB), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: LinkUpTheme.primaryTeal.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // App Logo / Lock Badge
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FAF8),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFCEF1EB)),
-            ),
-            padding: const EdgeInsets.all(12),
-            child: Image.memory(
-              kAppIconTealBytes,
-              fit: BoxFit.contain,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          Text(
-            'Complete Your Profile to Access Creator Profiles',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: LinkUpTheme.darkSlate,
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          Text(
-            'To discover verified creators, start live HD video calls, and connect with people near you, you must complete your profile 100%.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              color: const Color(0xFF64748B),
-              height: 1.45,
-            ),
-          ),
-          const SizedBox(height: 18),
-
-          // Profile Progress Bar
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FAF8),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFCEF1EB)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Profile Status: ${percent.toInt()}% Completed',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: LinkUpTheme.primaryTeal,
-                      ),
-                    ),
-                    Text(
-                      'Step $step of 10',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: LinkUpTheme.darkSlate,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: (step / 10).clamp(0.1, 1.0),
-                    minHeight: 7,
-                    backgroundColor: const Color(0xFFCEF1EB),
-                    valueColor: const AlwaysStoppedAnimation<Color>(LinkUpTheme.primaryTeal),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-
-          // Complete Profile to Access Creator Profiles Button
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinkUpTheme.buttonGradient,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: LinkUpTheme.primaryTeal.withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ElevatedButton(
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ProfileSetupScreen(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.edit_note_rounded, color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        'Complete Profile to Access Creators',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          Text(
-            '🔒 Takes less than 2 minutes • 100% Safe & Private',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF94A3B8),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLockedCreatorsPreview(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 4, 16, 80),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FEFB),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFCEF1EB)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE5F7F4),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.lock_rounded, color: LinkUpTheme.primaryTeal, size: 16),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '500+ Verified Creators Waiting',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: LinkUpTheme.darkSlate,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          // Preview circles
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (int i = 0; i < 4; i++)
-                Align(
-                  widthFactor: 0.72,
-                  child: Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.network(
-                        _creators[i % _creators.length]['avatar'],
-                        width: 52,
-                        height: 52,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: const Color(0xFFCEF1EB),
-                          child: const Icon(Icons.person, color: LinkUpTheme.primaryTeal, size: 24),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 14),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: LinkUpTheme.palePink,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFCEF1EB)),
-                ),
-                child: Text(
-                  '+500 Online',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: LinkUpTheme.primaryTeal,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Complete your profile above to unlock full creator profiles, live chats & instant video calls.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              color: const Color(0xFF64748B),
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ===========================================================
   // TAB 1: MAIN HOME TAB (Instagram-Style Feed + LinkUp Design)
   // ===========================================================
@@ -1069,16 +780,6 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverToBoxAdapter(
             child: _buildHeroGradientHeader(context, appState),
           ),
-
-          // 100% Profile Completion Gate Check
-          if (!appState.isProfileCompleted) ...[
-            SliverToBoxAdapter(
-              child: _buildProfileCompletionBanner(context, appState),
-            ),
-            SliverToBoxAdapter(
-              child: _buildLockedCreatorsPreview(context),
-            ),
-          ] else ...[
 
           const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
@@ -1228,7 +929,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No Creators Found',
+                      'No Active Creators Yet',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -1237,7 +938,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Try adjusting your search keyword, country selector, or filters to discover amazing creators.',
+                      'Be the first verified Creator on LinkUp. Register your profile to start connecting and earning on live 1-on-1 sessions.',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
@@ -1246,18 +947,27 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: _resetAllFilters,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: LinkUpTheme.primaryTeal,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      child: Text(
-                        'Reset Filters',
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const BecomeCreatorScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.star_rounded, color: Colors.white, size: 18),
+                      label: Text(
+                        'Become a Creator',
                         style: GoogleFonts.plusJakartaSans(
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: LinkUpTheme.primaryTeal,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       ),
                     ),
                   ],
@@ -1278,9 +988,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ],
-        ],
-      ),
-    );
+        ),
+      );
   }
 
   // ==========================================
@@ -1349,7 +1058,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Top Navigation Bar: Grid icon, LinkUp Text, Country, 💎, Like Logo (No Profile Avatar)
+                  // Top Navigation Bar: Grid icon, LinkUp Text, Country, , Like Logo (No Profile Avatar)
                   Row(
                     children: [
                       // Official LinkUp App Logo (Requested Branding)

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 /// Reusable LinkUp Coin Icon widget (Gold coin with sleek LinkUp branding)
 class CoinIcon extends StatelessWidget {
@@ -54,7 +54,7 @@ class CoinIcon extends StatelessWidget {
           ),
           child: Center(
             child: Text(
-              '🪙',
+              'C',
               style: TextStyle(
                 fontSize: size * 0.45,
                 height: 1.0,

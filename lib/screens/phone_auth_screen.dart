@@ -28,16 +28,16 @@ class CountryItem {
 }
 
 const List<CountryItem> kSupportedCountries = [
-  CountryItem(name: 'India', dialCode: '+91', flag: '🇮🇳', minDigits: 10, maxDigits: 10),
-  CountryItem(name: 'United States', dialCode: '+1', flag: '🇺🇸', minDigits: 10, maxDigits: 10),
-  CountryItem(name: 'United Kingdom', dialCode: '+44', flag: '🇬🇧', minDigits: 10, maxDigits: 10),
-  CountryItem(name: 'United Arab Emirates', dialCode: '+971', flag: '🇦🇪', minDigits: 9, maxDigits: 9),
-  CountryItem(name: 'Singapore', dialCode: '+65', flag: '🇸🇬', minDigits: 8, maxDigits: 8),
-  CountryItem(name: 'Canada', dialCode: '+1', flag: '🇨🇦', minDigits: 10, maxDigits: 10),
-  CountryItem(name: 'Australia', dialCode: '+61', flag: '🇦🇺', minDigits: 9, maxDigits: 9),
-  CountryItem(name: 'Germany', dialCode: '+49', flag: '🇩🇪', minDigits: 10, maxDigits: 11),
-  CountryItem(name: 'Saudi Arabia', dialCode: '+966', flag: '🇸🇦', minDigits: 9, maxDigits: 9),
-  CountryItem(name: 'France', dialCode: '+33', flag: '🇫🇷', minDigits: 9, maxDigits: 9),
+  CountryItem(name: 'India', dialCode: '+91', flag: 'IN', minDigits: 10, maxDigits: 10),
+  CountryItem(name: 'United States', dialCode: '+1', flag: 'US', minDigits: 10, maxDigits: 10),
+  CountryItem(name: 'United Kingdom', dialCode: '+44', flag: 'UK', minDigits: 10, maxDigits: 10),
+  CountryItem(name: 'United Arab Emirates', dialCode: '+971', flag: 'UAE', minDigits: 9, maxDigits: 9),
+  CountryItem(name: 'Singapore', dialCode: '+65', flag: 'SG', minDigits: 8, maxDigits: 8),
+  CountryItem(name: 'Canada', dialCode: '+1', flag: 'CA', minDigits: 10, maxDigits: 10),
+  CountryItem(name: 'Australia', dialCode: '+61', flag: 'AU', minDigits: 9, maxDigits: 9),
+  CountryItem(name: 'Germany', dialCode: '+49', flag: 'DE', minDigits: 10, maxDigits: 11),
+  CountryItem(name: 'Saudi Arabia', dialCode: '+966', flag: 'SA', minDigits: 9, maxDigits: 9),
+  CountryItem(name: 'France', dialCode: '+33', flag: 'FR', minDigits: 9, maxDigits: 9),
 ];
 
 class PhoneAuthScreen extends StatefulWidget {
@@ -51,7 +51,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
   final _phoneController = TextEditingController();
   final _phoneFocusNode = FocusNode();
 
-  CountryItem _selectedCountry = kSupportedCountries.first; // Default India 🇮🇳 +91
+  CountryItem _selectedCountry = kSupportedCountries.first; // Default India +91
 
   // 6-digit OTP fields
   final List<TextEditingController> _otpControllers =
@@ -675,7 +675,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
 
           SizedBox(height: (height * 0.045).clamp(28.0, 42.0)),
 
-          // Phone Number Input Card [ 🇮🇳 +91 v | Phone number ]
+          // Phone Number Input Card [ +91 v | Phone number ]
           Container(
             height: 58,
             decoration: BoxDecoration(

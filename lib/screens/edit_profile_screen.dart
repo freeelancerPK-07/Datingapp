@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/constants/svg_assets.dart';
 import 'package:version1/services/app_state.dart';
@@ -218,7 +218,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Photo #${slotIndex + 1} captured with Camera successfully! 📸',
+                          'Photo #${slotIndex + 1} captured with Camera successfully! ',
                           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
                         ),
                         backgroundColor: const Color(0xFF007A78),
@@ -253,7 +253,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Photo #${slotIndex + 1} chosen from Gallery successfully! 🖼️',
+                          'Photo #${slotIndex + 1} chosen from Gallery successfully! ',
                           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
                         ),
                         backgroundColor: const Color(0xFF007A78),
@@ -435,7 +435,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Profile updated successfully! ✨',
+          'Profile updated successfully! ',
           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
         ),
         backgroundColor: const Color(0xFF007A78),
@@ -579,7 +579,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      '★ MAIN',
+                                      'MAIN',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 9,
                                         fontWeight: FontWeight.w900,
