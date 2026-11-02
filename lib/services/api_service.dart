@@ -160,8 +160,36 @@ class ApiService {
   }
 
   // ---------------------------------------------------------------------------
-  // 5. Profile Sync
+  // 5. Profile Sync & Creator Registration
   // ---------------------------------------------------------------------------
+  Future<bool> registerAsCreator({
+    required String userId,
+    required String profession,
+    required int videoCallPrice,
+    int voiceCallPrice = 300,
+    int photoPrice = 200,
+    String? bio,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/creators/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': userId,
+          'profession': profession,
+          'videoCallPrice': videoCallPrice,
+          'voiceCallPrice': voiceCallPrice,
+          'photoPrice': photoPrice,
+          'bio': bio,
+        }),
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('[ApiService] Register creator error: $e');
+      return false;
+    }
+  }
+
   Future<bool> syncProfileOnboarding(String userId, Map<String, dynamic> profileData) async {
     try {
       final res = await http.put(

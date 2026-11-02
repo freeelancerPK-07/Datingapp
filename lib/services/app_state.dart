@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:version1/models/admin_settings_model.dart';
 import 'package:version1/models/call_record_model.dart';
 import 'package:version1/models/creator_model.dart';
@@ -55,6 +56,9 @@ class AppState extends ChangeNotifier {
       }
     } catch (_) {}
   }
+
+  bool _isCreator = false;
+  bool get isCreator => _isCreator || _allCreators.any((c) => _backendUserId != null && c.userId == _backendUserId);
 
   // User Profile & Onboarding State
   UserProfile _userProfile = const UserProfile(
@@ -114,6 +118,31 @@ class AppState extends ChangeNotifier {
         'currentStep': 10,
       });
     }
+    const FlutterSecureStorage().write(key: 'is_profile_completed', value: 'true');
+  }
+
+  Future<bool> becomeCreator({
+    required String profession,
+    required int videoCallPrice,
+    int voiceCallPrice = 300,
+    int photoPrice = 200,
+    String? bio,
+  }) async {
+    if (_backendUserId == null) return false;
+    final success = await ApiService.instance.registerAsCreator(
+      userId: _backendUserId!,
+      profession: profession,
+      videoCallPrice: videoCallPrice,
+      voiceCallPrice: voiceCallPrice,
+      photoPrice: photoPrice,
+      bio: bio ?? _userProfile.bio,
+    );
+    if (success) {
+      _isCreator = true;
+      await syncCreatorsFromBackend();
+      notifyListeners();
+    }
+    return success;
   }
 
   void setProfileCompleted(bool completed) {
@@ -278,10 +307,10 @@ class AppState extends ChangeNotifier {
   }
 
   // LinkUp Coins Unified Wallet State (V1 Single Virtual Currency)
-  int _availableCoins = 350; // Available Coins ready to spend
+  int _availableCoins = 0; // Available Coins ready to spend
   int get availableCoins => _availableCoins;
 
-  int _lockedCoins = 750; // Locked Coins for ongoing sessions
+  int _lockedCoins = 0; // Locked Coins for ongoing sessions
   int get lockedCoins => _lockedCoins;
   int get reservedCoins => _lockedCoins;
 
@@ -296,144 +325,14 @@ class AppState extends ChangeNotifier {
 
   final Set<String> _processedTransactionIds = {};
 
-  final List<WalletTransaction> _transactions = [
-    WalletTransaction(
-      id: 'TXN-HOLD-001',
-      description: 'Session Hold – Paid Photo (Olivia Fisher)',
-      coins: 200,
-      amountInr: 200.0,
-      isCredit: false,
-      type: TransactionType.sessionHold,
-      status: 'Reserved',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 6)),
-    ),
-    WalletTransaction(
-      id: 'TXN-HOLD-002',
-      description: 'Session Hold – Video Call (10m) (Maya Patel)',
-      coins: 500,
-      amountInr: 500.0,
-      isCredit: false,
-      type: TransactionType.sessionHold,
-      status: 'Reserved',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 25)),
-    ),
-    WalletTransaction(
-      id: 'TXN-BUY-782',
-      description: 'LinkUp Coins Purchase (Pack 400)',
-      coins: 400,
-      amountInr: 399.0,
-      isCredit: true,
-      type: TransactionType.purchase,
-      status: 'Completed',
-      timestamp: DateTime.now().subtract(const Duration(hours: 3)),
-    ),
-    WalletTransaction(
-      id: 'TXN-REFUND-101',
-      description: '100% Refund – Cancelled Request (Aanya Sharma)',
-      coins: 200,
-      amountInr: 200.0,
-      isCredit: true,
-      type: TransactionType.refund,
-      status: 'Refunded',
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    WalletTransaction(
-      id: 'TXN-BUY-541',
-      description: 'LinkUp Coins Purchase (Pack 600)',
-      coins: 600,
-      amountInr: 599.0,
-      isCredit: true,
-      type: TransactionType.purchase,
-      status: 'Completed',
-      timestamp: DateTime.now().subtract(const Duration(days: 3)),
-    ),
-    WalletTransaction(
-      id: 'TXN-INITIAL',
-      description: 'Welcome Bonus LinkUp Coins',
-      coins: 500,
-      amountInr: 499.0,
-      isCredit: true,
-      type: TransactionType.purchase,
-      status: 'Completed',
-      timestamp: DateTime.now().subtract(const Duration(days: 5)),
-    ),
-  ];
+  final List<WalletTransaction> _transactions = [];
   List<WalletTransaction> get transactions => List.unmodifiable(_transactions);
 
   // Active Conversations & Messages for Chat Tab
-  final List<Map<String, dynamic>> _conversations = [
-    {
-      'id': 'conv_c1',
-      'creatorId': 'c1',
-      'name': 'Aanya Sharma',
-      'avatar': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
-      'lastMessage': 'Loved connecting with you! See you on our next live call ✨',
-      'time': '2m ago',
-      'unread': 2,
-      'isOnline': true,
-      'diamondsPerMin': 50,
-    },
-    {
-      'id': 'conv_c2',
-      'creatorId': 'c2',
-      'name': 'Rohan Mehra',
-      'avatar': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
-      'lastMessage': 'Sure, let’s schedule the fitness session tomorrow at 6 PM 💪',
-      'time': '1h ago',
-      'unread': 0,
-      'isOnline': true,
-      'diamondsPerMin': 60,
-    },
-    {
-      'id': 'conv_c3',
-      'creatorId': 'c3',
-      'name': 'Priya Patel',
-      'avatar': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80',
-      'lastMessage': 'Thank you for the gift diamonds! Loved singing for you 🎵',
-      'time': 'Yesterday',
-      'unread': 0,
-      'isOnline': true,
-      'diamondsPerMin': 45,
-    },
-    {
-      'id': 'conv_c4',
-      'creatorId': 'c4',
-      'name': 'Sneha Roy',
-      'avatar': 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80',
-      'lastMessage': 'Just shared the new fashion lookbook photos with you!',
-      'time': '2d ago',
-      'unread': 0,
-      'isOnline': false,
-      'diamondsPerMin': 55,
-    },
-  ];
+  final List<Map<String, dynamic>> _conversations = [];
   List<Map<String, dynamic>> get conversations => List.unmodifiable(_conversations);
 
-  final Map<String, List<Map<String, dynamic>>> _messagesByConv = {
-    'conv_c1': [
-      {
-        'id': 'm1',
-        'isMe': false,
-        'text': 'Hey Pradeep! Welcome to my creator space ✨',
-        'time': '10:30 AM',
-        'status': 'read',
-      },
-      {
-        'id': 'm2',
-        'isMe': true,
-        'text': 'Hi Aanya! Really inspired by your dance reels on LinkUp.',
-        'time': '10:32 AM',
-        'status': 'read',
-      },
-      {
-        'id': 'm3',
-        'isMe': false,
-        'text': 'Loved connecting with you! See you on our next live call ✨',
-        'time': '10:35 AM',
-        'status': 'read',
-      },
-    ],
-  };
+  final Map<String, List<Map<String, dynamic>>> _messagesByConv = {};
 
   List<Map<String, dynamic>> getMessages(String convId) {
     return _messagesByConv[convId] ?? [
@@ -488,60 +387,7 @@ class AppState extends ChangeNotifier {
   }
 
   // Video Call History State
-  final List<CallRecord> _callHistory = [
-    CallRecord(
-      id: 'call_1',
-      creatorId: 'c1',
-      name: 'Aanya Sharma',
-      age: 23,
-      photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
-      type: CallType.completed,
-      timestamp: DateTime.now().subtract(const Duration(minutes: 35)),
-      durationSeconds: 614,
-      coinsUsed: 500,
-      isOnline: true,
-      isAvailableForCall: true,
-    ),
-    CallRecord(
-      id: 'call_2',
-      creatorId: 'c6',
-      name: 'Kavya Nair',
-      age: 23,
-      photoUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
-      type: CallType.outgoing,
-      timestamp: DateTime.now().subtract(const Duration(hours: 3)),
-      durationSeconds: 320,
-      coinsUsed: 500,
-      isOnline: true,
-      isAvailableForCall: true,
-    ),
-    CallRecord(
-      id: 'call_3',
-      creatorId: 'c3',
-      name: 'Priya Patel',
-      age: 22,
-      photoUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80',
-      type: CallType.missed,
-      timestamp: DateTime.now().subtract(const Duration(hours: 8)),
-      durationSeconds: 0,
-      coinsUsed: 0,
-      isOnline: true,
-      isAvailableForCall: false,
-    ),
-    CallRecord(
-      id: 'call_4',
-      creatorId: 'c4',
-      name: 'Sneha Roy',
-      age: 24,
-      photoUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80',
-      type: CallType.rejected,
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-      durationSeconds: 0,
-      coinsUsed: 0,
-      isOnline: false,
-      isAvailableForCall: false,
-    ),
-  ];
+  final List<CallRecord> _callHistory = [];
 
   List<CallRecord> get callHistory => List.unmodifiable(_callHistory);
 
@@ -567,8 +413,8 @@ class AppState extends ChangeNotifier {
   List<CreatorModel> get allCreators => _allCreators;
 
   // Global Liked & Saved Creators State (Instagram-Style Favorites & Bookmarks)
-  final Set<String> _likedCreatorIds = {'c1', 'c3'};
-  final Set<String> _savedCreatorIds = {'c2'};
+  final Set<String> _likedCreatorIds = {};
+  final Set<String> _savedCreatorIds = {};
 
   Set<String> get likedCreatorIds => _likedCreatorIds;
   Set<String> get savedCreatorIds => _savedCreatorIds;
@@ -612,86 +458,7 @@ class AppState extends ChangeNotifier {
   }
 
   void _initSampleCreators() {
-    _allCreators.addAll([
-      const CreatorModel(
-        id: 'c1',
-        name: 'Aanya Sharma',
-        age: 23,
-        photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
-        isOnline: true,
-        isVerified: true,
-        isActive: true,
-        bio: 'Bollywood dancer & lifestyle creator. Love sharing positive vibes!',
-        diamondsPerMin: 50,
-        location: 'Mumbai, India',
-        tags: ['Dance', 'Lifestyle', 'Hindi'],
-      ),
-      const CreatorModel(
-        id: 'c2',
-        name: 'Rohan Mehra',
-        age: 25,
-        photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
-        isOnline: true,
-        isVerified: true,
-        isActive: true,
-        bio: 'Fitness trainer & nutrition coach. Let’s talk wellness and gains!',
-        diamondsPerMin: 60,
-        location: 'Delhi, India',
-        tags: ['Fitness', 'Workout', 'English'],
-      ),
-      const CreatorModel(
-        id: 'c3',
-        name: 'Priya Patel',
-        age: 22,
-        photoUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80',
-        isOnline: true,
-        isVerified: true,
-        isActive: true,
-        bio: 'Classical singer and music student. Here to chat about melodies.',
-        diamondsPerMin: 45,
-        location: 'Bengaluru, India',
-        tags: ['Music', 'Singing', 'Kannada', 'Hindi'],
-      ),
-      const CreatorModel(
-        id: 'c4',
-        name: 'Sneha Roy',
-        age: 24,
-        photoUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80',
-        isOnline: false,
-        isVerified: true,
-        isActive: true,
-        bio: 'Fashion designer & digital nomad. Travel tips & trend chats.',
-        diamondsPerMin: 55,
-        location: 'Kolkata, India',
-        tags: ['Fashion', 'Travel', 'Bengali'],
-      ),
-      const CreatorModel(
-        id: 'c5',
-        name: 'Vikram Joshi',
-        age: 26,
-        photoUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80',
-        isOnline: true,
-        isVerified: false,
-        isActive: true,
-        bio: 'Standup comic & podcast host. Ready for a good laugh!',
-        diamondsPerMin: 40,
-        location: 'Pune, India',
-        tags: ['Comedy', 'Podcast', 'Marathi'],
-      ),
-      const CreatorModel(
-        id: 'c6',
-        name: 'Kavya Nair',
-        age: 23,
-        photoUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
-        isOnline: true,
-        isVerified: true,
-        isActive: true,
-        bio: 'Food vlogger & cafe hopper. Ask me for the best culinary spots!',
-        diamondsPerMin: 50,
-        location: 'Kochi, India',
-        tags: ['Food', 'Vlogging', 'Malayalam'],
-      ),
-    ]);
+    // Only real creators fetched from backend PostgreSQL are loaded
   }
 
   // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import 'package:version1/constants/app_icon_base64.dart';
 import 'package:version1/screens/home_screen.dart';
 import 'package:version1/screens/profile_setup_screen.dart';
 import 'package:version1/screens/signup_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:version1/services/app_state.dart';
 import 'package:version1/services/api_service.dart';
 
@@ -290,10 +291,23 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
       }
 
       final res = await ApiService.instance.verifyPhoneOtp(phone, otp);
+      bool isProfileCompleted = false;
+
       if (res['success'] == true && res['user'] != null) {
         final userId = res['user']['id'];
+        final token = res['token'];
+        final profile = res['user']['profile'];
+        isProfileCompleted = profile != null && profile['isCompleted'] == true;
+
         if (userId != null) {
           AppState.instance.setBackendUserId(userId.toString());
+          AppState.instance.setProfileCompleted(isProfileCompleted);
+
+          // Save session locally
+          const storage = FlutterSecureStorage();
+          if (token != null) await storage.write(key: 'user_token', value: token.toString());
+          await storage.write(key: 'user_id', value: userId.toString());
+          await storage.write(key: 'is_profile_completed', value: isProfileCompleted ? 'true' : 'false');
         }
       }
 
@@ -323,7 +337,9 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         ),
       );
 
-      if (!AppState.instance.isProfileCompleted) {
+      // Only first-time users (uncompleted profile) go to ProfileSetupScreen.
+      // Returning/completed users go directly to HomeScreen!
+      if (!isProfileCompleted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
           (route) => false,

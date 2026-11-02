@@ -1,7 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:version1/screens/home_screen.dart';
+import 'package:version1/screens/profile_setup_screen.dart';
 import 'package:version1/screens/welcome_screen.dart';
+import 'package:version1/services/app_state.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -52,15 +56,38 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
-  void _navigateToWelcome() {
+  Future<void> _navigateToWelcome() async {
     _navigationTimer?.cancel();
     if (!mounted || _navigated) return;
     _navigated = true;
 
+    Widget targetScreen = const WelcomeScreen();
+
+    try {
+      const storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'user_token');
+      final userId = await storage.read(key: 'user_id');
+      final isCompletedStr = await storage.read(key: 'is_profile_completed');
+
+      if (token != null && userId != null) {
+        AppState.instance.setBackendUserId(userId);
+        if (isCompletedStr == 'true') {
+          AppState.instance.setProfileCompleted(true);
+          targetScreen = const HomeScreen();
+        } else {
+          AppState.instance.setProfileCompleted(false);
+          targetScreen = const ProfileSetupScreen();
+        }
+      }
+    } catch (_) {
+      targetScreen = const WelcomeScreen();
+    }
+
+    if (!mounted) return;
+
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const WelcomeScreen(),
+        pageBuilder: (context, animation, secondaryAnimation) => targetScreen,
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           final curved = CurvedAnimation(
             parent: animation,

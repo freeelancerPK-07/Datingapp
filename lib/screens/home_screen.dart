@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/constants/app_icon_base64.dart';
@@ -62,238 +62,50 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
 
+  Map<String, dynamic> _buildCreatorMap(CreatorModel c) {
+    return {
+      'id': c.id,
+      'name': c.name,
+      'age': c.age,
+      'profession': c.profession,
+      'location': c.location,
+      'country': 'India',
+      'distance': '2km',
+      'diamondsPerMin': c.diamondsPerMin,
+      'image': c.photoUrl.isNotEmpty
+          ? c.photoUrl
+          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=80',
+      'avatar': c.photoUrl.isNotEmpty
+          ? c.photoUrl
+          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+      'caption': c.bio,
+      'bio': c.bio,
+      'followers': c.followers,
+      'rating': c.rating.toString(),
+      'reviewCount': c.reviewCount,
+      'likes': 100,
+      'comments': 10,
+      'tags': c.tags,
+      'categories': ['Featured', 'Trending', 'Recommended'],
+      'languages': c.languages,
+      'gender': 'Female',
+      'isVerified': c.isVerified,
+      'isOnline': c.isOnline,
+      'isLiked': AppState.instance.isCreatorLiked(c.id),
+      'isFollowing': false,
+      'isSaved': AppState.instance.isCreatorSaved(c.id),
+    };
+  }
+
   late final List<Map<String, dynamic>> _creators;
 
   @override
   void initState() {
     super.initState();
-    _creators = [
-      {
-        'id': 'c1',
-        'name': 'Aanya Sharma',
-        'age': 23,
-        'profession': 'Bollywood Dancer & Creator',
-        'location': 'Bandra, Mumbai',
-        'country': 'India',
-        'distance': '2km',
-        'diamondsPerMin': 50,
-        'image':
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=80',
-        'avatar':
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-        'caption':
-            'Bollywood choreography and aesthetic lifestyle vlogs. Let us connect through live dance chats and positive energy!',
-        'bio':
-            'Bollywood dancer and lifestyle creator. Love sharing positive vibes, choreography tips, and private video sessions.',
-        'followers': '142K',
-        'rating': '4.9',
-        'reviewCount': 136,
-        'likes': 1420,
-        'comments': 54,
-        'tags': ['Dance', 'Lifestyle', 'Bollywood', 'Music'],
-        'categories': ['Featured', 'Top Rated', 'Trending', 'Live Now'],
-        'languages': ['English', 'Hindi', 'Tamil'],
-        'gender': 'Female',
-        'isVerified': true,
-        'isOnline': true,
-        'isLiked': true,
-        'isFollowing': true,
-        'isSaved': false,
-      },
-      {
-        'id': 'c2',
-        'name': 'Olivia Fisher',
-        'age': 20,
-        'profession': 'Fashion Designer',
-        'location': 'Juhu, Mumbai',
-        'country': 'India',
-        'distance': '3km',
-        'diamondsPerMin': 50,
-        'image':
-            'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&auto=format&fit=crop&q=80',
-        'avatar':
-            'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&auto=format&fit=crop&q=80',
-        'caption':
-            'Designing the new summer pastel collection. Coffee breaks and vintage boutique hopping. Let us connect and spark creativity!',
-        'bio':
-            'Fashion designer and visual storyteller. Living between art galleries, vintage boutiques, and rooftop coffee shops.',
-        'followers': '128K',
-        'rating': '4.9',
-        'reviewCount': 128,
-        'likes': 1284,
-        'comments': 48,
-        'tags': ['Fashion', 'PastelAesthetic', 'Coffee', 'Art'],
-        'categories': ['Featured', 'Trending', 'Recommended'],
-        'languages': ['English', 'Tamil', 'Hindi'],
-        'gender': 'Female',
-        'isVerified': true,
-        'isOnline': true,
-        'isLiked': false,
-        'isFollowing': false,
-        'isSaved': false,
-      },
-      {
-        'id': 'c3',
-        'name': 'Maya Patel',
-        'age': 22,
-        'profession': 'Digital Creator & DJ',
-        'location': 'Juhu Beach, Mumbai',
-        'country': 'India',
-        'distance': '5km',
-        'diamondsPerMin': 60,
-        'image':
-            'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&auto=format&fit=crop&q=80',
-        'avatar':
-            'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80',
-        'caption':
-            'Sunset rooftop session dropping tonight! Curating electronic beats and aesthetic lifestyle vlogs. Who is joining for the live set?',
-        'bio':
-            'Music producer, sunset chaser, and content creator. Spreading good energy and electronic rhythms.',
-        'followers': '94K',
-        'rating': '4.9',
-        'reviewCount': 96,
-        'likes': 2140,
-        'comments': 86,
-        'tags': ['Music', 'ElectronicBeats', 'DJ', 'Fitness'],
-        'categories': ['Featured', 'Top Rated', 'Trending', 'Live Now'],
-        'languages': ['English', 'Hindi', 'Tamil'],
-        'gender': 'Female',
-        'isVerified': true,
-        'isOnline': true,
-        'isLiked': true,
-        'isFollowing': true,
-        'isSaved': true,
-      },
-      {
-        'id': 'c4',
-        'name': 'Rohan Mehra',
-        'age': 25,
-        'profession': 'Fitness Coach & Trainer',
-        'location': 'Connaught Place, Delhi',
-        'country': 'India',
-        'distance': '4km',
-        'diamondsPerMin': 60,
-        'image':
-            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&auto=format&fit=crop&q=80',
-        'avatar':
-            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-        'caption':
-            'Pushing limits every single day. Let us discuss custom workout plans, nutrition goals, and healthy lifestyle routines.',
-        'bio':
-            'Certified strength & conditioning coach. Helping people achieve their dream fitness goals through 1-on-1 consultations.',
-        'followers': '85K',
-        'rating': '4.8',
-        'reviewCount': 72,
-        'likes': 1120,
-        'comments': 38,
-        'tags': ['Fitness', 'Workout', 'Nutrition', 'Health'],
-        'categories': ['Featured', 'Trending'],
-        'languages': ['English', 'Hindi', 'Punjabi'],
-        'gender': 'Male',
-        'isVerified': true,
-        'isOnline': true,
-        'isLiked': false,
-        'isFollowing': false,
-        'isSaved': false,
-      },
-      {
-        'id': 'c5',
-        'name': 'Liam Vance',
-        'age': 24,
-        'profession': 'Editorial Photographer',
-        'location': 'Colaba, Mumbai',
-        'country': 'United Kingdom',
-        'distance': '8km',
-        'diamondsPerMin': 45,
-        'image':
-            'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800&auto=format&fit=crop&q=80',
-        'avatar':
-            'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&auto=format&fit=crop&q=80',
-        'caption':
-            'Golden hour raw portraits on 35mm film. The street colors in Mumbai during dusk are unmatched.',
-        'bio':
-            'Capturing raw emotions through analog 35mm film. Always down for spontaneous road trips and indie gigs.',
-        'followers': '65K',
-        'rating': '4.8',
-        'reviewCount': 52,
-        'likes': 890,
-        'comments': 32,
-        'tags': ['Photography', '35mm', 'StreetFilm', 'IndieRock'],
-        'categories': ['Featured', 'Recommended'],
-        'languages': ['English', 'French'],
-        'gender': 'Male',
-        'isVerified': true,
-        'isOnline': false,
-        'isLiked': false,
-        'isFollowing': false,
-        'isSaved': false,
-      },
-      {
-        'id': 'c6',
-        'name': 'Sophia Chen',
-        'age': 21,
-        'profession': 'Yoga & Wellness Coach',
-        'location': 'Marine Drive, Mumbai',
-        'country': 'Singapore',
-        'distance': '4km',
-        'diamondsPerMin': 55,
-        'image':
-            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&auto=format&fit=crop&q=80',
-        'avatar':
-            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80',
-        'caption':
-            'Morning meditation and sunrise yoga flow. Finding peace and breath amidst the vibrant city pace. Breathe in calmness, breathe out doubts.',
-        'bio':
-            'Certified mindfulness and yoga instructor. Encouraging holistic living, plant-based smoothies, and mindful connections.',
-        'followers': '112K',
-        'rating': '5.0',
-        'reviewCount': 142,
-        'likes': 1650,
-        'comments': 59,
-        'tags': ['YogaFlow', 'Wellness', 'Mindfulness', 'HealthyLiving'],
-        'categories': ['Featured', 'Top Rated', 'Trending', 'Live Now'],
-        'languages': ['English', 'Tamil', 'Telugu'],
-        'gender': 'Female',
-        'isVerified': true,
-        'isOnline': true,
-        'isLiked': false,
-        'isFollowing': false,
-        'isSaved': false,
-      },
-      {
-        'id': 'c7',
-        'name': 'Elena Rostova',
-        'age': 22,
-        'profession': 'Travel & Food Storyteller',
-        'location': 'Downtown Marina, Dubai',
-        'country': 'UAE',
-        'distance': '2km',
-        'diamondsPerMin': 50,
-        'image':
-            'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&auto=format&fit=crop&q=80',
-        'avatar':
-            'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
-        'caption':
-            'Exploring hidden street food alleys and capturing colorful stories. Anyone up for a sunset street food adventure?',
-        'bio':
-            'Full-time travel journalist and food curator. Visited 24 countries, seeking authentic local experiences.',
-        'followers': '175K',
-        'rating': '4.9',
-        'reviewCount': 188,
-        'likes': 3210,
-        'comments': 142,
-        'tags': ['TravelStory', 'Foodie', 'Wanderlust', 'StreetEats'],
-        'categories': ['Featured', 'Recommended', 'Trending'],
-        'languages': ['English', 'Tamil', 'Kannada'],
-        'gender': 'Female',
-        'isVerified': true,
-        'isOnline': true,
-        'isLiked': false,
-        'isFollowing': false,
-        'isSaved': false,
-      },
-    ];
+    AppState.instance.syncCreatorsFromBackend();
+    _creators = [];
   }
+
 
   @override
   void dispose() {
@@ -316,7 +128,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Map<String, dynamic>> get _filteredCreators {
     final query = _searchController.text.trim().toLowerCase();
-    return _creators.where((creator) {
+    final liveModels = AppState.instance.allCreators;
+    final sourceList = liveModels.map(_buildCreatorMap).toList();
+    return sourceList.where((creator) {
       // 1. Search Query Filter
       if (query.isNotEmpty) {
         final name = (creator['name'] as String? ?? '').toLowerCase();
@@ -1245,8 +1059,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return RefreshIndicator(
       color: LinkUpTheme.primaryTeal,
       onRefresh: () async {
-        await Future.delayed(const Duration(milliseconds: 500));
-        setState(() {});
+        await appState.syncCreatorsFromBackend();
+        if (mounted) setState(() {});
       },
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(),

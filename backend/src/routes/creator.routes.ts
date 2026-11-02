@@ -93,3 +93,111 @@ creatorRouter.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/v1/creators/register
+ * Convert a real user into a Creator
+ */
+creatorRouter.post('/register', async (req, res) => {
+  try {
+    const {
+      userId,
+      profession = 'Creator',
+      videoCallPrice = 500,
+      voiceCallPrice = 300,
+      photoPrice = 200,
+      tier = 'VIP',
+      tags = ['Lifestyle', 'Creator'],
+      languages = ['English', 'Tamil'],
+      bio,
+    } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { profile: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const creator = await prisma.creator.upsert({
+      where: { userId },
+      update: {
+        profession,
+        videoCallPrice: Number(videoCallPrice),
+        voiceCallPrice: Number(voiceCallPrice),
+        photoPrice: Number(photoPrice),
+        tier,
+        tags,
+        languages,
+        isOnline: true,
+        isAvailable: true,
+      },
+      create: {
+        userId,
+        profession,
+        videoCallPrice: Number(videoCallPrice),
+        voiceCallPrice: Number(voiceCallPrice),
+        photoPrice: Number(photoPrice),
+        tier,
+        tags,
+        languages,
+        isOnline: true,
+        isAvailable: true,
+      },
+    });
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { role: 'CREATOR' },
+    });
+
+    if (bio && user.profile) {
+      await prisma.userProfile.update({
+        where: { userId },
+        data: { bio },
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Successfully registered as a Creator!',
+      creator,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/creators/toggle-online
+ */
+creatorRouter.post('/toggle-online', async (req, res) => {
+  try {
+    const { userId, isOnline } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    const creator = await prisma.creator.findUnique({
+      where: { userId },
+    });
+
+    if (!creator) {
+      return res.status(404).json({ error: 'Creator not found' });
+    }
+
+    const updated = await prisma.creator.update({
+      where: { userId },
+      data: { isOnline: isOnline ?? !creator.isOnline },
+    });
+
+    return res.json({ success: true, isOnline: updated.isOnline });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});

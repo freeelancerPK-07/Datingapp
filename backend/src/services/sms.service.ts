@@ -89,6 +89,37 @@ export async function sendRealOtpSms(phone: string, otp: string): Promise<SendSm
     }
   }
 
+  // 3. BRIDGE (Kroszborg Open-Source Android SMS Gateway)
+  const bridgeApiKey = process.env.BRIDGE_API_KEY;
+  if (bridgeApiKey && bridgeApiKey !== 'YOUR_BRIDGE_API_KEY') {
+    try {
+      console.log(`[SMS Gateway] Sending real SMS via Bridge (bridge.kroszborg.co) to +91${tenDigitPhone}...`);
+      const response = await fetch('https://api.bridge.kroszborg.co/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${bridgeApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: `+91${tenDigitPhone}`,
+          message: `Your LinkUp verification code is: ${otp}`,
+        }),
+      });
+
+      const data: any = await response.json().catch(() => ({}));
+      console.log('[SMS Gateway] Bridge Response:', data);
+
+      if (response.ok) {
+        return { success: true, message: 'Real SMS delivered via Bridge Gateway' };
+      } else {
+        return { success: false, error: data.message || 'Bridge delivery error' };
+      }
+    } catch (err: any) {
+      console.error('[SMS Gateway] Bridge Network Error:', err.message);
+      return { success: false, error: err.message };
+    }
+  }
+
   // Fallback (Dev Log)
   console.log(`[SMS Gateway - Mock] No API key found. Use terminal OTP or Master OTP 123456. OTP: ${otp}`);
   return { success: true, message: 'Mock OTP logged in console' };
