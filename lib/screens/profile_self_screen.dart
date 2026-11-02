@@ -1361,7 +1361,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                             decoration: BoxDecoration(
                               color: const Color(0xFFE6F4F1),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: const Color(0xFF007A78).withOpacity(0.3)),
+                              border: Border.all(color: const Color(0xFF007A78).withValues(alpha: 0.3)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,

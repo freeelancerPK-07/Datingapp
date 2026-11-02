@@ -1,5 +1,6 @@
 class CreatorModel {
   final String id;
+  final String? userId;
   final String name;
   final int age;
   final String photoUrl;
@@ -25,6 +26,7 @@ class CreatorModel {
 
   const CreatorModel({
     required this.id,
+    this.userId,
     required this.name,
     required this.age,
     required this.photoUrl,
@@ -52,6 +54,7 @@ class CreatorModel {
   factory CreatorModel.fromJson(Map<String, dynamic> json) {
     return CreatorModel(
       id: json['id'] ?? '',
+      userId: json['userId'],
       name: json['name'] ?? 'Creator',
       age: json['age'] ?? 23,
       photoUrl: json['photoUrl'] ?? '',
