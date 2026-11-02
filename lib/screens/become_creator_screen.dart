@@ -562,3 +562,4 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
     );
   }
 }
+
