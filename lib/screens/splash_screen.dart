@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:version1/screens/home_screen.dart';
 import 'package:version1/screens/profile_setup_screen.dart';
 import 'package:version1/screens/welcome_screen.dart';
+import 'package:version1/services/api_service.dart';
 import 'package:version1/services/app_state.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -60,6 +61,10 @@ class _SplashScreenState extends State<SplashScreen>
     _navigationTimer?.cancel();
     if (!mounted || _navigated) return;
     _navigated = true;
+
+    try {
+      await ApiService.instance.probeBackendUrl();
+    } catch (_) {}
 
     Widget targetScreen = const WelcomeScreen();
 

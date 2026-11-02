@@ -9,18 +9,40 @@ class ApiService {
   factory ApiService() => instance;
   ApiService._internal();
 
-  /// Returns appropriate base URL based on platform
+  String _resolvedBaseUrl = '';
+
+  /// Returns appropriate base URL based on platform & connectivity
   String get baseUrl {
+    if (_resolvedBaseUrl.isNotEmpty) return _resolvedBaseUrl;
     if (kIsWeb) {
       return 'http://localhost:5000/api/v1';
     }
     try {
       if (Platform.isAndroid) {
-        // 10.0.2.2 reaches the host PC from Android Emulator
         return 'http://10.0.2.2:5000/api/v1';
       }
     } catch (_) {}
     return 'http://localhost:5000/api/v1';
+  }
+
+  /// Automatically probes backend on app startup (supports Emulator, Physical Phone via adb reverse, and LAN)
+  Future<void> probeBackendUrl() async {
+    if (kIsWeb) return;
+    final candidates = [
+      'http://localhost:5000/api/v1',  // Physical phone via adb reverse
+      'http://127.0.0.1:5000/api/v1',
+      'http://10.0.2.2:5000/api/v1',   // Android Emulator
+    ];
+    for (final url in candidates) {
+      try {
+        final res = await http.get(Uri.parse('$url/creators')).timeout(const Duration(milliseconds: 600));
+        if (res.statusCode == 200) {
+          _resolvedBaseUrl = url;
+          debugPrint('[ApiService] Connected to backend at: $url');
+          return;
+        }
+      } catch (_) {}
+    }
   }
 
   // ---------------------------------------------------------------------------
