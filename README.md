@@ -1,12 +1,12 @@
-# 💚 LinkUp — Dating, Creator Discovery & Live Video Consultation App
+# LinkUp — Dating, Creator Discovery & Live Video Consultation App
 
 LinkUp is a next-generation Flutter mobile application engineered for authentic connections, creator discovery, and real-time private 1-on-1 HD video consultations. Built with modern design aesthetics, a unified **Mint & Teal** visual theme, responsive layouts, and zero UI overflow errors.
 
 ---
 
-## ✨ Key Features & Capabilities
+## Key Features & Capabilities
 
-### 1. 🛡️ Authentication & Onboarding
+### 1.Authentication & Onboarding
 * **Visual Welcome Screen**: Ambient gradient aesthetics with custom scale and slide route transitions.
 * **Flexible Sign-In & Sign-Up**: Name, email, password validation, visibility toggles, and Google/Phone auth options.
 * **Mobile OTP Verification Flow**: 6-digit challenge code entry with auto-focus and resend countdown timer.
@@ -14,7 +14,7 @@ LinkUp is a next-generation Flutter mobile application engineered for authentic 
 
 ---
 
-### 2. 🎯 10-Step Profile Completion Engine
+### 2.10-Step Profile Completion Engine
 * **100% Comprehensive Profile Setup**:
   1. Full Name & Display Name
   2. Date of Birth & Age Calculation (18+ verification)
@@ -31,7 +31,7 @@ LinkUp is a next-generation Flutter mobile application engineered for authentic 
 
 ---
 
-### 3. 🔒 100% Profile Completion Gate for Creator Discovery
+### 3.100% Profile Completion Gate for Creator Discovery
 * **Hero Gradient Header Widget**: Always anchored at the top of the Home screen with greeting, brand mark, country selector, diamond balance, and Instagram-style favorites widget.
 * **Gated Feed Access**:
   * If the user's profile is incomplete (`!isProfileCompleted`), a dedicated **Completion Banner** appears directly below the top box widget with progress indicators and a one-click *"Complete Profile to Access Creators"* button.
@@ -40,7 +40,7 @@ LinkUp is a next-generation Flutter mobile application engineered for authentic 
 
 ---
 
-### 4. ❤️ Instagram-Style Favorites & Saved Activity (`LikedSavedScreen`)
+### 4.Instagram-Style Favorites & Saved Activity (`LikedSavedScreen`)
 * **Real-Time Header Badge**: The top-right heart icon on the Home screen header displays an active badge counter reflecting total liked and saved creators.
 * **Dedicated Activity Hub**:
   * **Liked Tab ❤️**: Displays all liked creator profiles in a modern 2-column card grid.
@@ -49,7 +49,7 @@ LinkUp is a next-generation Flutter mobile application engineered for authentic 
 
 ---
 
-### 5. 📸 Discover Creators & Feed (`HomeScreen`)
+### 5.Discover Creators & Feed (`HomeScreen`)
 * **Curated Category Filters**: Featured, Top Rated, Trending, Recommended, and Live Now.
 * **Instagram-Style Feed Posts**: High-resolution media, double-tap to like, distance badges, verified badges, rating pill, follower count, bio caption, and hashtags.
 * **Instant CTA**: Direct "Book Video Call" button with vibrant gradient on every post.
@@ -57,7 +57,7 @@ LinkUp is a next-generation Flutter mobile application engineered for authentic 
 
 ---
 
-### 6. 🌟 Creator Profile & Rate Card (`CreatorDetailScreen`)
+### 6.Creator Profile & Rate Card (`CreatorDetailScreen`)
 * **Visual Gallery Pager**: Smooth pagination with active dot indicators.
 * **Detailed Bio & Vibe**: About me, verified badge, response time, rating reviews count, and profile prompts.
 * **Platform Standard Services**:
@@ -67,7 +67,7 @@ LinkUp is a next-generation Flutter mobile application engineered for authentic 
 
 ---
 
-### 7. 📹 Active HD Video Call Experience (`ActiveCallScreen`)
+### 7.Active HD Video Call Experience (`ActiveCallScreen`)
 * **Live Video Controls**: Flip camera, mute audio, toggle video, and speakerphone.
 * **Real-Time Duration & Coin Burn**: Active timer tracking session duration and diamonds consumed.
 * **Transparent Commission Split**: Automated 70/30 revenue distribution (70% to Creator, 30% Platform fee) with dynamic coin calculation.
@@ -75,7 +75,7 @@ LinkUp is a next-generation Flutter mobile application engineered for authentic 
 
 ---
 
-### 8. 💎 In-App Diamond Wallet & Payments (`WalletScreen`)
+### 8.In-App Diamond Wallet & Payments (`WalletScreen`)
 * **Balance Overview**: Active diamond coins balance with quick recharge shortcuts.
 * **Recharge Packages**: Tiered diamond coin packages with bonus diamonds and promotional badges.
 * **Transaction Ledger**: Complete history tracking video call debits, recharge credits, photo purchases, and 100% refund settlements.
@@ -83,7 +83,7 @@ LinkUp is a next-generation Flutter mobile application engineered for authentic 
 
 ---
 
-## 🎨 Unified Mint & Teal Design System
+##Unified Mint & Teal Design System
 
 All screens and UI components adhere strictly to a unified color palette and typography system:
 
@@ -101,7 +101,7 @@ All screens and UI components adhere strictly to a unified color palette and typ
 
 ---
 
-## 📁 Project Architecture & Structure
+##Project Architecture & Structure
 
 ```
 version1/
@@ -152,7 +152,7 @@ version1/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 * Flutter SDK (3.19.0 or higher recommended)
