@@ -291,24 +291,29 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
       }
 
       final res = await ApiService.instance.verifyPhoneOtp(phone, otp);
-      bool isProfileCompleted = false;
 
-      if (res['success'] == true && res['user'] != null) {
-        final userId = res['user']['id'];
-        final token = res['token'];
-        final profile = res['user']['profile'];
-        isProfileCompleted = profile != null && profile['isCompleted'] == true;
+      if (res['success'] != true || res['user'] == null) {
+        if (!mounted) return;
+        setState(() {
+          _isVerifyingOtp = false;
+          _otpErrorMessage = res['error']?.toString() ?? 'Invalid or expired OTP code';
+        });
+        return;
+      }
 
-        if (userId != null) {
-          AppState.instance.setBackendUserId(userId.toString());
-          AppState.instance.setProfileCompleted(isProfileCompleted);
+      final userId = res['user']['id'];
+      final token = res['token'];
+      final profile = res['user']['profile'];
+      final bool isProfileCompleted = res['isProfileCompleted'] == true ||
+          (profile != null && profile['isCompleted'] == true);
 
-          // Save session locally
-          const storage = FlutterSecureStorage();
-          if (token != null) await storage.write(key: 'user_token', value: token.toString());
-          await storage.write(key: 'user_id', value: userId.toString());
-          await storage.write(key: 'is_profile_completed', value: isProfileCompleted ? 'true' : 'false');
-        }
+      if (userId != null && token != null) {
+        await AppState.instance.saveUserSession(
+          token: token.toString(),
+          userId: userId.toString(),
+          isProfileCompleted: isProfileCompleted,
+          phone: phone,
+        );
       }
 
       if (!mounted) return;

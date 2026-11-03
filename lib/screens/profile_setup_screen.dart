@@ -2,8 +2,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:version1/models/user_profile_model.dart';
 import 'package:version1/screens/home_screen.dart';
+import 'package:version1/services/api_service.dart';
 import 'package:version1/services/app_state.dart';
 import 'package:version1/widgets/app_image.dart';
 
@@ -96,6 +98,24 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   @override
   void initState() {
     super.initState();
+    if (AppState.instance.backendUserId == null) {
+      const storage = FlutterSecureStorage(
+        aOptions: AndroidOptions(
+          encryptedSharedPreferences: true,
+          resetOnError: true,
+        ),
+      );
+      storage.read(key: 'user_id').then((uid) {
+        if (uid != null && uid.isNotEmpty) {
+          AppState.instance.setBackendUserId(uid);
+        }
+      });
+      storage.read(key: 'user_token').then((tok) {
+        if (tok != null && tok.isNotEmpty) {
+          ApiService.instance.setAuthToken(tok);
+        }
+      });
+    }
     final initialProfile = AppState.instance.userProfile;
     _currentStep = initialProfile.currentStep.clamp(1, 10);
     _pageController = PageController(initialPage: _currentStep - 1);
@@ -249,9 +269,24 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     setState(() => _isSavingFinalProfile = true);
     HapticFeedback.heavyImpact();
 
-    // Simulate POST /users/profile API call
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
+    if (AppState.instance.backendUserId == null) {
+      try {
+        const storage = FlutterSecureStorage(
+          aOptions: AndroidOptions(
+            encryptedSharedPreferences: true,
+            resetOnError: true,
+          ),
+        );
+        final uid = await storage.read(key: 'user_id');
+        if (uid != null && uid.isNotEmpty) {
+          AppState.instance.setBackendUserId(uid);
+        }
+        final token = await storage.read(key: 'user_token');
+        if (token != null && token.isNotEmpty) {
+          ApiService.instance.setAuthToken(token);
+        }
+      } catch (_) {}
+    }
 
     final finalProfile = UserProfile(
       name: _nameController.text.trim(),
@@ -271,8 +306,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       currentStep: 10,
     );
 
-    AppState.instance.completeProfileSetup(finalProfile);
+    await AppState.instance.completeProfileSetup(finalProfile);
 
+    if (!mounted) return;
     setState(() => _isSavingFinalProfile = false);
 
     ScaffoldMessenger.of(context).showSnackBar(

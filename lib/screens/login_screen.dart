@@ -8,6 +8,7 @@ import 'package:version1/constants/svg_assets.dart';
 import 'package:version1/screens/home_screen.dart';
 import 'package:version1/screens/profile_setup_screen.dart';
 import 'package:version1/screens/signup_screen.dart';
+import 'package:version1/services/api_service.dart';
 import 'package:version1/services/app_state.dart';
 
 /// Pixel-Perfect Login Screen matching LinkUp Mint/Teal theme reference
@@ -34,12 +35,54 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() => _isLoading = true);
-      Future.delayed(const Duration(milliseconds: 650), () {
+      try {
+        final email = _emailController.text.trim();
+        final password = _passwordController.text;
+
+        final res = await ApiService.instance.loginEmail(
+          email: email,
+          password: password,
+        );
+
+        if (!mounted) return;
+
+        if (res['success'] != true || res['token'] == null) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFD32F2F),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              content: Text(
+                res['error']?.toString() ?? 'Invalid email or password. Please try again.',
+                style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+            ),
+          );
+          return;
+        }
+
+        final token = res['token'].toString();
+        final userId = res['user']?['id']?.toString() ?? '';
+        final profile = res['user']?['profile'];
+        final bool isProfileCompleted = res['isProfileCompleted'] == true ||
+            (profile != null && profile['isCompleted'] == true);
+
+        await AppState.instance.saveUserSession(
+          token: token,
+          userId: userId,
+          isProfileCompleted: isProfileCompleted,
+          email: email,
+        );
+
         if (!mounted) return;
         setState(() => _isLoading = false);
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFF007A78),
@@ -61,7 +104,8 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         );
-        if (!AppState.instance.isProfileCompleted) {
+
+        if (!isProfileCompleted) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
             (route) => false,
@@ -72,7 +116,16 @@ class _LoginScreenState extends State<LoginScreen> {
             (route) => false,
           );
         }
-      });
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFD32F2F),
+            content: Text('Login error: $e'),
+          ),
+        );
+      }
     }
   }
 

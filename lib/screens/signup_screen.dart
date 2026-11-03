@@ -10,8 +10,9 @@ import 'package:version1/constants/svg_assets.dart';
 import 'package:version1/screens/login_screen.dart';
 import 'package:version1/screens/phone_auth_screen.dart';
 import 'package:version1/screens/profile_setup_screen.dart';
+import 'package:version1/services/api_service.dart';
 import 'package:version1/services/app_state.dart';
-
+ 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -32,6 +33,43 @@ class _SignUpScreenState extends State<SignUpScreen> {
     try {
       final account = await GoogleSignIn.instance.authenticate();
       if (mounted) {
+        if (account.email.isNotEmpty) {
+          final res = await ApiService.instance.registerEmail(
+            email: account.email,
+            password: 'google_oauth_${account.id}',
+            name: account.displayName,
+          );
+          if (res['success'] == true) {
+            final token = res['token'].toString();
+            final userId = res['user']['id'].toString();
+            final isProfileCompleted = res['isProfileCompleted'] == true;
+            await AppState.instance.saveUserSession(
+              token: token,
+              userId: userId,
+              isProfileCompleted: isProfileCompleted,
+              email: account.email,
+              name: account.displayName,
+            );
+          } else {
+            final loginRes = await ApiService.instance.loginEmail(
+              email: account.email,
+              password: 'google_oauth_${account.id}',
+            );
+            if (loginRes['success'] == true) {
+              final token = loginRes['token'].toString();
+              final userId = loginRes['user']['id'].toString();
+              final isProfileCompleted = loginRes['isProfileCompleted'] == true;
+              await AppState.instance.saveUserSession(
+                token: token,
+                userId: userId,
+                isProfileCompleted: isProfileCompleted,
+                email: account.email,
+                name: account.displayName,
+              );
+            }
+          }
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFF007A78),

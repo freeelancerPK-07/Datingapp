@@ -69,22 +69,39 @@ class _SplashScreenState extends State<SplashScreen>
     Widget targetScreen = const WelcomeScreen();
 
     try {
-      const storage = FlutterSecureStorage();
+      const storage = FlutterSecureStorage(
+        aOptions: AndroidOptions(
+          encryptedSharedPreferences: true,
+          resetOnError: true,
+        ),
+      );
       final token = await storage.read(key: 'user_token');
       final userId = await storage.read(key: 'user_id');
       final isCompletedStr = await storage.read(key: 'is_profile_completed');
 
-      if (token != null && userId != null) {
+      if (token != null && token.isNotEmpty && userId != null && userId.isNotEmpty) {
+        ApiService.instance.setAuthToken(token);
         AppState.instance.setBackendUserId(userId);
-        if (isCompletedStr == 'true') {
-          AppState.instance.setProfileCompleted(true);
+
+        bool isCompleted = isCompletedStr == 'true';
+        try {
+          final meRes = await ApiService.instance.getMe(userId: userId).timeout(const Duration(seconds: 2));
+          if (meRes['success'] == true && meRes['isProfileCompleted'] != null) {
+            isCompleted = meRes['isProfileCompleted'] == true;
+            await storage.write(key: 'is_profile_completed', value: isCompleted ? 'true' : 'false');
+          }
+        } catch (_) {}
+
+        AppState.instance.setProfileCompleted(isCompleted);
+
+        if (isCompleted) {
           targetScreen = const HomeScreen();
         } else {
-          AppState.instance.setProfileCompleted(false);
           targetScreen = const ProfileSetupScreen();
         }
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[SplashScreen] Auth check error: $e');
       targetScreen = const WelcomeScreen();
     }
 

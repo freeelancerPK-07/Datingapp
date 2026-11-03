@@ -27,12 +27,71 @@ class AppState extends ChangeNotifier {
     syncCreatorsFromBackend();
   }
 
+  static const FlutterSecureStorage _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+      resetOnError: true,
+    ),
+  );
+
   String? _backendUserId;
   String? get backendUserId => _backendUserId;
 
   void setBackendUserId(String id) {
     _backendUserId = id;
     syncWalletFromBackend();
+  }
+
+  Future<void> saveUserSession({
+    required String token,
+    required String userId,
+    required bool isProfileCompleted,
+    String? email,
+    String? name,
+    String? phone,
+  }) async {
+    _backendUserId = userId;
+    setProfileCompleted(isProfileCompleted);
+    ApiService.instance.setAuthToken(token);
+    if (name != null && name.isNotEmpty) _userName = name;
+    if (phone != null && phone.isNotEmpty) _userPhone = phone;
+
+    try {
+      await _storage.write(key: 'user_token', value: token);
+      await _storage.write(key: 'user_id', value: userId);
+      await _storage.write(key: 'is_profile_completed', value: isProfileCompleted ? 'true' : 'false');
+      if (email != null) await _storage.write(key: 'user_email', value: email);
+      if (name != null) await _storage.write(key: 'user_name', value: name);
+      if (phone != null) await _storage.write(key: 'user_phone', value: phone);
+    } catch (e) {
+      debugPrint('[AppState] Secure storage write error: $e');
+    }
+
+    syncWalletFromBackend();
+    syncCreatorsFromBackend();
+    notifyListeners();
+  }
+
+  Future<void> logout() async {
+    _backendUserId = null;
+    _userProfile = const UserProfile(
+      name: '',
+      photoUrl: '',
+      galleryPhotos: [],
+      bio: '',
+      city: '',
+      state: '',
+      country: 'India',
+      interests: [],
+      languages: [],
+      profileCompleted: false,
+      currentStep: 1,
+    );
+    ApiService.instance.clearAuthToken();
+    try {
+      await _storage.deleteAll();
+    } catch (_) {}
+    notifyListeners();
   }
 
   Future<void> syncCreatorsFromBackend() async {
@@ -93,7 +152,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void completeProfileSetup(UserProfile finalProfile) {
+  Future<bool> completeProfileSetup(UserProfile finalProfile) async {
     _userProfile = finalProfile.copyWith(
       profileCompleted: true,
       currentStep: 10,
@@ -103,8 +162,9 @@ class AppState extends ChangeNotifier {
     _userBio = _userProfile.bio;
     notifyListeners();
 
+    bool syncSuccess = true;
     if (_backendUserId != null) {
-      ApiService.instance.syncProfileOnboarding(_backendUserId!, {
+      syncSuccess = await ApiService.instance.syncProfileOnboarding(_backendUserId!, {
         'name': _userProfile.name,
         'bio': _userProfile.bio,
         'city': _userProfile.city,
@@ -118,7 +178,14 @@ class AppState extends ChangeNotifier {
         'currentStep': 10,
       });
     }
-    const FlutterSecureStorage().write(key: 'is_profile_completed', value: 'true');
+
+    try {
+      await _storage.write(key: 'is_profile_completed', value: 'true');
+    } catch (e) {
+      debugPrint('[AppState] Error saving profile completion flag: $e');
+    }
+
+    return syncSuccess;
   }
 
   Future<bool> becomeCreator({

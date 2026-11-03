@@ -10,6 +10,24 @@ class ApiService {
   ApiService._internal();
 
   String _resolvedBaseUrl = '';
+  String? _authToken;
+
+  String? get authToken => _authToken;
+
+  void setAuthToken(String token) {
+    _authToken = token;
+    debugPrint('[ApiService] Auth token updated: ${_authToken != null && _authToken!.length > 10 ? _authToken!.substring(0, 10) : ''}...');
+  }
+
+  void clearAuthToken() {
+    _authToken = null;
+    debugPrint('[ApiService] Auth token cleared.');
+  }
+
+  Map<String, String> get _headers => {
+    'Content-Type': 'application/json',
+    if (_authToken != null && _authToken!.isNotEmpty) 'Authorization': 'Bearer $_authToken',
+  };
 
   /// Returns appropriate base URL based on platform & connectivity
   String get baseUrl {
@@ -19,7 +37,8 @@ class ApiService {
     }
     try {
       if (Platform.isAndroid) {
-        return 'http://10.0.2.2:5000/api/v1';
+        // Default on Android for physical phone (with adb reverse) or emulator fallback
+        return 'http://localhost:5000/api/v1';
       }
     } catch (_) {}
     return 'http://localhost:5000/api/v1';
@@ -35,7 +54,7 @@ class ApiService {
     ];
     for (final url in candidates) {
       try {
-        final res = await http.get(Uri.parse('$url/creators')).timeout(const Duration(milliseconds: 600));
+        final res = await http.get(Uri.parse('$url/creators')).timeout(const Duration(milliseconds: 1500));
         if (res.statusCode == 200) {
           _resolvedBaseUrl = url;
           debugPrint('[ApiService] Connected to backend at: $url');
@@ -50,7 +69,7 @@ class ApiService {
   // ---------------------------------------------------------------------------
   Future<List<CreatorModel>> fetchCreators() async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/creators')).timeout(
+      final res = await http.get(Uri.parse('$baseUrl/creators'), headers: _headers).timeout(
             const Duration(seconds: 4),
           );
       if (res.statusCode == 200) {
@@ -67,7 +86,7 @@ class ApiService {
   }
 
   // ---------------------------------------------------------------------------
-  // 2. Auth API (Phone OTP)
+  // 2. Auth API (Phone OTP & Email Auth)
   // ---------------------------------------------------------------------------
   Future<Map<String, dynamic>> sendPhoneOtp(String phone) async {
     try {
@@ -90,9 +109,79 @@ class ApiService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'phone': phone, 'otp': otp}),
       );
-      return jsonDecode(res.body);
+      final data = jsonDecode(res.body);
+      if (data['success'] == true && data['token'] != null) {
+        setAuthToken(data['token'].toString());
+      }
+      return data;
     } catch (e) {
       debugPrint('[ApiService] Verify OTP error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> registerEmail({
+    required String email,
+    required String password,
+    String? name,
+    String? phone,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+          if (name != null) 'name': name,
+          if (phone != null) 'phone': phone,
+        }),
+      );
+      final data = jsonDecode(res.body);
+      if (data['success'] == true && data['token'] != null) {
+        setAuthToken(data['token'].toString());
+      }
+      return data;
+    } catch (e) {
+      debugPrint('[ApiService] Register error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> loginEmail({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
+      );
+      final data = jsonDecode(res.body);
+      if (data['success'] == true && data['token'] != null) {
+        setAuthToken(data['token'].toString());
+      }
+      return data;
+    } catch (e) {
+      debugPrint('[ApiService] Login error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> getMe({String? userId}) async {
+    try {
+      final uri = Uri.parse('$baseUrl/auth/me${userId != null ? '?userId=$userId' : ''}');
+      final res = await http.get(uri, headers: _headers);
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return {'success': false, 'error': 'Status ${res.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiService] getMe error: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -102,7 +191,10 @@ class ApiService {
   // ---------------------------------------------------------------------------
   Future<int?> fetchWalletBalance(String userId) async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/wallet/balance?userId=$userId'));
+      final res = await http.get(
+        Uri.parse('$baseUrl/wallet/balance?userId=$userId'),
+        headers: _headers,
+      );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         return data['balance'] as int?;
@@ -121,7 +213,7 @@ class ApiService {
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/wallet/recharge'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _headers,
         body: jsonEncode({
           'userId': userId,
           'coins': coins,
@@ -146,7 +238,7 @@ class ApiService {
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/calls/initiate'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _headers,
         body: jsonEncode({
           'callerId': callerId,
           'creatorId': creatorId,
@@ -168,7 +260,7 @@ class ApiService {
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/calls/$callId/end'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _headers,
         body: jsonEncode({
           'durationSeconds': durationSeconds,
           'endReason': reason,
@@ -198,7 +290,7 @@ class ApiService {
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/creators/register'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _headers,
         body: jsonEncode({
           'userId': userId,
           'profession': profession,
@@ -222,7 +314,7 @@ class ApiService {
     try {
       final res = await http.put(
         Uri.parse('$baseUrl/profile/onboarding'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _headers,
         body: jsonEncode({
           'userId': userId,
           ...profileData,
