@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -230,6 +230,42 @@ export default function App() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
+
+  // Real dynamic weekly activity calculation (from actual calls & transactions)
+  const weeklyChartData = useMemo(() => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+
+    recentCalls.forEach((c) => {
+      if (c.createdAt) {
+        const d = new Date(c.createdAt);
+        const dayIdx = (d.getDay() + 6) % 7;
+        counts[dayIdx] += 1;
+      }
+    });
+
+    recentTxns.forEach((t) => {
+      if (t.createdAt) {
+        const d = new Date(t.createdAt);
+        const dayIdx = (d.getDay() + 6) % 7;
+        counts[dayIdx] += 1;
+      }
+    });
+
+    const maxCount = Math.max(...counts, 1);
+    const todayIdx = (new Date().getDay() + 6) % 7;
+
+    return days.map((day, idx) => {
+      const val = counts[idx];
+      const percent = val === 0 ? 8 : Math.max(15, Math.round((val / maxCount) * 100));
+      return {
+        day,
+        height: `${percent}%`,
+        val: val > 0 ? `${val}` : '0',
+        active: idx === todayIdx,
+      };
+    });
+  }, [recentCalls, recentTxns]);
 
   // ---------------------------------------------------------------------------
   // Data Fetching
@@ -585,7 +621,7 @@ export default function App() {
           {/* Welcome greeting */}
           <div>
             <h2 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-              Hey Graham, Welcome Back! 👋
+              Hey Admin, Welcome Back! 👋
             </h2>
             <p className="text-xs font-semibold text-slate-400">
               Live LinkUp Overview & Verification Portal
@@ -676,19 +712,19 @@ export default function App() {
                       Total Revenue
                     </span>
                     <span className="bg-[#84CC16]/20 border border-[#84CC16]/30 text-[#84CC16] text-[11px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                      <ArrowUpRight className="w-3 h-3" /> +4.7%
+                      <ArrowUpRight className="w-3 h-3" /> Live
                     </span>
                   </div>
                   <div className="z-10 my-2">
                     <p className="text-3xl font-black tracking-tight">
-                      ₹{stats.totalRevenue > 0 ? stats.totalRevenue.toLocaleString() : '2,18,541'}
+                      ₹{stats.totalRevenue.toLocaleString()}
                     </p>
                     <p className="text-[11px] font-semibold text-slate-400 mt-1">
                       From wallet recharges & VIP subscriptions
                     </p>
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800 z-10">
-                    <span>From last weeks</span>
+                    <span>From database</span>
                     <span className="font-bold text-white">Live Sync</span>
                   </div>
                   {/* Decorative glowing gradient sphere */}
@@ -702,19 +738,19 @@ export default function App() {
                       Total Transactions
                     </span>
                     <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                      <ArrowUpRight className="w-3 h-3" /> +15.3%
+                      <ArrowUpRight className="w-3 h-3" /> Real-time
                     </span>
                   </div>
                   <div className="my-2">
                     <p className="text-3xl font-black text-slate-900 tracking-tight">
-                      {stats.totalDiamondsSold > 0 ? stats.totalDiamondsSold.toLocaleString() : '7,548'}
+                      {stats.totalDiamondsSold.toLocaleString()}
                     </p>
                     <p className="text-[11px] font-semibold text-slate-500 mt-1">
                       Diamonds sold to active users
                     </p>
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-100">
-                    <span>From last weeks</span>
+                    <span>From database</span>
                     <span className="font-bold text-indigo-600">Wallet Ledger</span>
                   </div>
                 </div>
@@ -726,13 +762,13 @@ export default function App() {
                       User Growth
                     </span>
                     <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                      <ArrowUpRight className="w-3 h-3" /> +12.5%
+                      <ArrowUpRight className="w-3 h-3" /> DB Verified
                     </span>
                   </div>
                   <div className="my-2 flex items-end justify-between">
                     <div>
                       <p className="text-3xl font-black text-slate-900 tracking-tight">
-                        {stats.totalUsers > 0 ? stats.totalUsers.toLocaleString() : '12,230'}
+                        {stats.totalUsers.toLocaleString()}
                         <span className="text-sm font-bold text-slate-400 ml-1.5">Users</span>
                       </p>
                       <p className="text-[11px] font-semibold text-slate-500 mt-1">
@@ -764,7 +800,7 @@ export default function App() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-100">
-                    <span>From last weeks</span>
+                    <span>From database</span>
                     <span className="font-bold text-emerald-600">Verified DB</span>
                   </div>
                 </div>
@@ -775,7 +811,7 @@ export default function App() {
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-lg font-black text-slate-900 tracking-tight">Overall Insights</h4>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-400">Last 7 Days</span>
+                    <span className="text-xs font-bold text-slate-400">Database Sync</span>
                     <button
                       onClick={() => setActiveMenu('creators')}
                       className="text-xs font-black bg-slate-900 hover:bg-black text-white px-3.5 py-1.5 rounded-full transition-all"
@@ -794,10 +830,10 @@ export default function App() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-2xl font-black text-slate-900">
-                          {stats.totalCreators > 0 ? stats.totalCreators : '376'}
+                          {stats.activeCreators.toLocaleString()}
                         </span>
                         <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                          ↗ 37.8%
+                          Live
                         </span>
                       </div>
                       <p className="text-xs font-bold text-slate-400 mt-0.5">Total Active Creators</p>
@@ -812,10 +848,10 @@ export default function App() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-2xl font-black text-slate-900">
-                          {stats.totalCalls > 0 ? stats.totalCalls : '942'}
+                          {stats.totalCalls.toLocaleString()}
                         </span>
-                        <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                          ↗ 23.8%
+                        <span className="text-[10px] font-black text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">
+                          Sessions
                         </span>
                       </div>
                       <p className="text-xs font-bold text-slate-400 mt-0.5">Total Video Calls</p>
@@ -830,10 +866,10 @@ export default function App() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-2xl font-black text-slate-900">
-                          {stats.totalDiamondsSold > 1000 ? `${(stats.totalDiamondsSold / 1000).toFixed(1)}k` : '256k'}
+                          {stats.totalDiamondsSold.toLocaleString()}
                         </span>
-                        <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                          ↗ 23.8%
+                        <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                          Coins
                         </span>
                       </div>
                       <p className="text-xs font-bold text-slate-400 mt-0.5">Total Diamonds Reach</p>
@@ -847,12 +883,14 @@ export default function App() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl font-black text-slate-900">1.2X</span>
-                        <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                          ↗ 23.8%
+                        <span className="text-2xl font-black text-slate-900">
+                          {stats.completedCalls.toLocaleString()}
+                        </span>
+                        <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                          Completed
                         </span>
                       </div>
-                      <p className="text-xs font-bold text-slate-400 mt-0.5">User Engagement</p>
+                      <p className="text-xs font-bold text-slate-400 mt-0.5">Completed Calls</p>
                     </div>
                   </div>
                 </div>
@@ -879,15 +917,7 @@ export default function App() {
 
                     {/* Bar Chart Bars with Lime Accent & Tooltip */}
                     <div className="h-48 flex items-end justify-between gap-3 pt-6 px-2">
-                      {[
-                        { day: 'Mon', height: '45%', val: '22k' },
-                        { day: 'Tue', height: '65%', val: '31k' },
-                        { day: 'Wed', height: '50%', val: '26k' },
-                        { day: 'Thu', height: '80%', val: '41k' },
-                        { day: 'Fri', height: '100%', val: '48.5K', active: true },
-                        { day: 'Sat', height: '70%', val: '35k' },
-                        { day: 'Sun', height: '60%', val: '29k' },
-                      ].map((bar) => (
+                      {weeklyChartData.map((bar) => (
                         <div key={bar.day} className="flex-1 flex flex-col items-center gap-2 group relative">
                           {/* Active Bar Tooltip */}
                           {bar.active && (
@@ -1091,7 +1121,7 @@ export default function App() {
                         Total Earning
                       </span>
                       <p className="text-3xl font-black tracking-tight mt-1">
-                        ₹{stats.totalRevenue > 0 ? stats.totalRevenue.toLocaleString() : '1,508.00'}
+                        ₹{stats.totalRevenue.toLocaleString()}
                       </p>
                       <p className="text-[11px] font-semibold text-blue-100 mt-1">Platform Wallet Balance</p>
                     </div>
@@ -1962,17 +1992,21 @@ function AvatarImage({
 }) {
   const [hasError, setHasError] = useState(false);
 
-  const cleanUrl =
-    src &&
-    typeof src === 'string' &&
-    src.trim().length > 0 &&
-    !src.startsWith('/data/') &&
-    !src.startsWith('file:') &&
-    !src.startsWith('content:')
-      ? src.startsWith('/uploads/')
-        ? src
-        : src
-      : '';
+  useEffect(() => {
+    setHasError(false);
+  }, [src]);
+
+  let cleanUrl = '';
+  if (src && typeof src === 'string' && src.trim().length > 0) {
+    const s = src.trim();
+    if (!s.startsWith('/data/') && !s.startsWith('file:') && !s.startsWith('content:')) {
+      if (s.includes('/uploads/')) {
+        cleanUrl = '/uploads/' + s.split('/uploads/')[1];
+      } else {
+        cleanUrl = s;
+      }
+    }
+  }
 
   if (!cleanUrl || hasError) {
     const initial = (alt && alt.trim().length > 0 ? alt.trim()[0] : 'U').toUpperCase();
