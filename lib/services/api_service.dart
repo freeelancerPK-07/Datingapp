@@ -328,4 +328,64 @@ class ApiService {
       return false;
     }
   }
+
+  Future<Map<String, dynamic>> applyForCreator({
+    required String userId,
+    required String legalName,
+    required int age,
+    required String profession,
+    required int videoCallPrice,
+    int voiceCallPrice = 300,
+    String? bio,
+    String? photoUrl,
+    String govtIdType = 'Aadhaar Card',
+    String? socialHandle,
+    String? payoutUpiId,
+    List<String>? tags,
+    List<String>? languages,
+    String subscriptionPlan = 'MONTHLY_299',
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/creators/apply'),
+        headers: _headers,
+        body: jsonEncode({
+          'userId': userId,
+          'legalName': legalName,
+          'age': age,
+          'profession': profession,
+          'videoCallPrice': videoCallPrice,
+          'voiceCallPrice': voiceCallPrice,
+          'bio': bio,
+          'photoUrl': photoUrl,
+          'govtIdType': govtIdType,
+          'socialHandle': socialHandle,
+          'payoutUpiId': payoutUpiId,
+          'tags': tags ?? ['Lifestyle', 'Creator'],
+          'languages': languages ?? ['English', 'Tamil'],
+          'subscriptionPlan': subscriptionPlan,
+        }),
+      );
+      return jsonDecode(res.body);
+    } catch (e) {
+      debugPrint('[ApiService] Apply creator error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> getCreatorApplicationStatus(String userId) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/creators/application-status?userId=$userId'),
+        headers: _headers,
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return {'success': false, 'error': 'Status ${res.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiService] Get application status error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
 }

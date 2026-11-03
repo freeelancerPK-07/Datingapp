@@ -42,23 +42,31 @@ enum TransactionStatus {
   REVERTED
 }
 
-model User {
-  id           String        @id @default(uuid()) @db.Uuid
-  phone        String?       @unique
-  email        String?       @unique
-  passwordHash String?
-  role         Role          @default(USER)
-  isVerified   Boolean       @default(false)
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+enum CreatorStatus {
+  PENDING_VERIFICATION
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
 
-  profile      UserProfile?
-  creator      Creator?
-  wallet       Wallet?
-  outgoingCalls CallSession[] @relation("CallerUser")
-  sentMessages  ChatMessage[] @relation("SentMessages")
-  receivedMessages ChatMessage[] @relation("ReceivedMessages")
+model User {
+  id                  String               @id @default(uuid()) @db.Uuid
+  phone               String?              @unique
+  email               String?              @unique
+  passwordHash        String?
+  role                Role                 @default(USER)
+  isVerified          Boolean              @default(false)
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  profile             UserProfile?
+  creator             Creator?
+  wallet              Wallet?
+  outgoingCalls       CallSession[]        @relation("CallerUser")
+  sentMessages        ChatMessage[]        @relation("SentMessages")
+  receivedMessages    ChatMessage[]        @relation("ReceivedMessages")
+  creatorApplications CreatorApplication[]
 
   @@map("users")
 }
@@ -91,6 +99,10 @@ model Creator {
   tier               String        @default("VIP")
   isOnline           Boolean       @default(true)
   isAvailable        Boolean       @default(true)
+  isActive           Boolean       @default(true)
+  isApproved         Boolean       @default(true)
+  isFeatured         Boolean       @default(false)
+  age                Int           @default(22)
   videoCallPrice     Int           @default(500)
   voiceCallPrice     Int           @default(300)
   photoPrice         Int           @default(200)
@@ -108,6 +120,38 @@ model Creator {
   incomingCalls      CallSession[] @relation("CreatorCalls")
 
   @@map("creators")
+}
+
+model CreatorApplication {
+  id               String        @id @default(uuid()) @db.Uuid
+  userId           String        @db.Uuid
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  legalName        String
+  age              Int           @default(21)
+  profession       String        @default("Lifestyle & Dating")
+  bio              String        @default("")
+  photoUrl         String        @default("")
+  govtIdType       String        @default("Aadhaar Card")
+  govtIdFrontUrl   String?
+  govtIdBackUrl    String?
+  selfieUrl        String?
+  socialHandle     String?
+  payoutUpiId      String        @default("")
+  videoCallPrice   Int           @default(500)
+  voiceCallPrice   Int           @default(300)
+  languages        String[]      @default(["English", "Tamil"])
+  tags             String[]      @default(["Lifestyle", "Dating"])
+  subscriptionPlan String        @default("MONTHLY_299") // MONTHLY_299, YEARLY_2499
+  subscriptionPaid Boolean       @default(true)
+  status           CreatorStatus @default(PENDING_VERIFICATION)
+  rejectionReason  String?
+  reviewedAt       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("creator_applications")
 }
 
 model Wallet {
@@ -192,4 +236,3 @@ model AdminSetting {
 
   @@map("admin_settings")
 }
-
