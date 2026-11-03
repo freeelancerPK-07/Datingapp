@@ -125,10 +125,11 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
+server.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`====================================================`);
   console.log(`🚀 LinkUp Full Backend Server running on port ${PORT}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`🌐 LAN Access:   http://10.186.14.158:${PORT}/api/v1`);
   console.log(`👥 Creators API: http://localhost:${PORT}/api/v1/creators`);
   console.log(`💰 Wallet API:   http://localhost:${PORT}/api/v1/wallet/packages`);
   console.log(`💬 Chat API:     http://localhost:${PORT}/api/v1/chat/messages`);

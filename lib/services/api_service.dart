@@ -37,8 +37,8 @@ class ApiService {
     }
     try {
       if (Platform.isAndroid) {
-        // Default on Android for physical phone (with adb reverse) or emulator fallback
-        return 'http://localhost:5000/api/v1';
+        // Physical phone on local Wi-Fi or adb reverse
+        return 'http://10.186.14.158:5000/api/v1';
       }
     } catch (_) {}
     return 'http://localhost:5000/api/v1';
@@ -48,9 +48,10 @@ class ApiService {
   Future<void> probeBackendUrl() async {
     if (kIsWeb) return;
     final candidates = [
-      'http://localhost:5000/api/v1',  // Physical phone via adb reverse
+      'http://10.186.14.158:5000/api/v1', // Physical phone on Wi-Fi (Host PC IP)
+      'http://localhost:5000/api/v1',     // Physical phone via adb reverse
+      'http://10.0.2.2:5000/api/v1',      // Android Emulator
       'http://127.0.0.1:5000/api/v1',
-      'http://10.0.2.2:5000/api/v1',   // Android Emulator
     ];
     for (final url in candidates) {
       try {
