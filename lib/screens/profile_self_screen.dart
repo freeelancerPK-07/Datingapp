@@ -871,9 +871,21 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              appState.deleteUserAccount();
+              
+              // Show loading overlay
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFDC2626)),
+                ),
+              );
+
+              await appState.deleteUserAccount();
+
+              if (!context.mounted) return;
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => const WelcomeScreen()),

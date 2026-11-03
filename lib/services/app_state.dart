@@ -351,12 +351,17 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void deleteUserAccount() {
-    _userProfile = const UserProfile(profileCompleted: false, currentStep: 1);
-    _userName = 'Guest';
-    _userCity = '';
-    _userBio = '';
-    notifyListeners();
+  Future<bool> deleteUserAccount() async {
+    final userId = _backendUserId;
+    if (userId != null && userId.isNotEmpty) {
+      try {
+        await ApiService.instance.deleteAccount(userId);
+      } catch (e) {
+        debugPrint('[AppState] Error during remote deleteAccount: $e');
+      }
+    }
+    await logout();
+    return true;
   }
 
   void updateUserProfile({

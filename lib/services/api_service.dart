@@ -446,4 +446,19 @@ class ApiService {
       return {'success': false, 'error': e.toString()};
     }
   }
+
+  /// Permanently deletes user account and all associated data from PostgreSQL database
+  Future<bool> deleteAccount(String userId) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/profile/delete-account'),
+        headers: _headers,
+        body: jsonEncode({'userId': userId}),
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('[ApiService] Delete account error: $e');
+      return false;
+    }
+  }
 }

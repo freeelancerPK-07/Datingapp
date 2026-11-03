@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { deleteUserPermanently } from '../lib/userCleanup.js';
 
 export const adminRouter = Router();
 
@@ -618,6 +619,27 @@ adminRouter.put('/users/:userId/toggle-status', async (req, res) => {
       success: true,
       message: updated.isActive ? 'User account unblocked' : 'User account blocked',
       user: updated,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/v1/admin/users/:userId
+ * Admin permanently deletes a user or creator account from PostgreSQL
+ */
+adminRouter.delete('/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const success = await deleteUserPermanently(userId);
+    if (!success) {
+      return res.status(404).json({ success: false, error: 'User not found in database' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Account permanently purged from database and platform.',
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { deleteUserPermanently } from '../lib/userCleanup.js';
 
 export const profileRouter = Router();
 
@@ -102,5 +103,30 @@ profileRouter.put('/onboarding', async (req, res) => {
     return res.json({ success: true, profile });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/v1/profile/delete-account
+ * User permanently deletes their own account from the mobile app
+ */
+profileRouter.delete('/delete-account', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'userId is required' });
+    }
+
+    const success = await deleteUserPermanently(String(userId));
+    if (!success) {
+      return res.status(404).json({ success: false, error: 'User not found in database' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Your account and all associated data have been permanently deleted from database.',
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
