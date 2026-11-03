@@ -257,7 +257,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                     if (appState.userProfile.photoUrl.isEmpty) {
                       appState.updateUserProfile(photoUrl: pickedPath);
                     }
-                    if (!context.mounted) return;
+                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -294,7 +294,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                     if (appState.userProfile.photoUrl.isEmpty) {
                       appState.updateUserProfile(photoUrl: pickedPath);
                     }
-                    if (!context.mounted) return;
+                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -677,8 +677,8 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
             const SizedBox(height: 12),
             ...[
               {'code': 'en', 'title': 'English'},
-              {'code': 'ta', 'title': 'தமிழ் (Tamil)'},
-              {'code': 'hi', 'title': 'हिंदी (Hindi)'},
+              {'code': 'ta', 'title': 'à®¤à®®à®¿à®´à¯ (Tamil)'},
+              {'code': 'hi', 'title': 'à¤¹à¤¿à¤‚à¤¦à¥€ (Hindi)'},
             ].map(
               (item) {
                 final isSelected = currentLang == item['title'];
@@ -748,7 +748,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
             ListTile(
               leading: const Icon(Icons.email_outlined, color: Color(0xFF007A78)),
               title: Text('Email Support', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
-              subtitle: const Text('support@linkupapp.in • 2 hour response'),
+              subtitle: const Text('support@linkupapp.in â€¢ 2 hour response'),
               onTap: () => Navigator.pop(ctx),
             ),
             ListTile(
@@ -885,7 +885,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
 
               await appState.deleteUserAccount();
 
-              if (!context.mounted) return;
+              if (!mounted) return;
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => const WelcomeScreen()),
@@ -1118,7 +1118,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                         Text(
                           isDistanceHidden
                               ? appState.userCity
-                              : '${appState.userCity} • 2 km away',
+                              : '${appState.userCity} â€¢ 2 km away',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -1144,7 +1144,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                         ),
                       ),
                       child: Text(
-                        isOnlineHidden ? 'Status Hidden (Private)' : '● Active now',
+                        isOnlineHidden ? 'Status Hidden (Private)' : 'â— Active now',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -1168,7 +1168,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                             label: Text(
                               'Edit Profile',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13,0
+                                fontSize: 13,
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF007A78),
                               ),
@@ -1622,7 +1622,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      '“Super polite, engaging conversations, and highly recommended on LinkUp live video calls!”',
+                      'â€œSuper polite, engaging conversations, and highly recommended on LinkUp live video calls!â€',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12.5,
                         fontStyle: FontStyle.italic,

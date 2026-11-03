@@ -899,19 +899,32 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
                           border: Border.all(color: LinkUpTheme.primaryTeal, width: 2.5),
                         ),
                         child: ClipOval(
-                          child: _profilePhoto.isNotEmpty
-                              ? (_profilePhoto.startsWith('http')
-                                  ? Image.network(
-                                      _profilePhoto,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 38, color: LinkUpTheme.primaryTeal),
-                                    )
-                                  : Image.file(
-                                      File(_profilePhoto),
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 38, color: LinkUpTheme.primaryTeal),
-                                    ))
-                              : const Icon(Icons.person, size: 38, color: LinkUpTheme.primaryTeal),
+                          child: _isUploadingPhoto
+                              ? const Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: LinkUpTheme.primaryTeal,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  ),
+                                )
+                              : (_profilePhoto.isNotEmpty
+                                  ? (_profilePhoto.startsWith('http')
+                                      ? Image.network(
+                                          _profilePhoto,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) =>
+                                              const Icon(Icons.person, size: 38, color: LinkUpTheme.primaryTeal),
+                                        )
+                                      : Image.file(
+                                          File(_profilePhoto),
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) =>
+                                              const Icon(Icons.person, size: 38, color: LinkUpTheme.primaryTeal),
+                                        ))
+                                  : const Icon(Icons.person, size: 38, color: LinkUpTheme.primaryTeal)),
                         ),
                       ),
                       Positioned(
@@ -1001,14 +1014,14 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
                             ? Image.network(
                                 photo,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Center(
+                                errorBuilder: (context, error, stackTrace) => const Center(
                                   child: Icon(Icons.broken_image, color: Colors.grey),
                                 ),
                               )
                             : Image.file(
                                 File(photo),
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Center(
+                                errorBuilder: (context, error, stackTrace) => const Center(
                                   child: Icon(Icons.broken_image, color: Colors.grey),
                                 ),
                               ),

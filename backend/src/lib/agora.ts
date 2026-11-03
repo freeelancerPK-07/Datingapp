@@ -51,3 +51,4 @@ export function generateAgoraTokens(
     expiresInSecs: durationSeconds,
   };
 }
+
