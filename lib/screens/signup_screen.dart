@@ -70,6 +70,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
           }
         }
 
+        if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFF007A78),

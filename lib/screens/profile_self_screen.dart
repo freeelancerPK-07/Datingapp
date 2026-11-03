@@ -930,11 +930,11 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
+              final nav = Navigator.of(context);
               Navigator.pop(ctx);
               await AppState.instance.logout();
-              if (!context.mounted) return;
-              Navigator.pushAndRemoveUntil(
-                context,
+              if (!mounted) return;
+              nav.pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const WelcomeScreen()),
                 (route) => false,
               );

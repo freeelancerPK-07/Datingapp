@@ -71,7 +71,6 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       const storage = FlutterSecureStorage(
         aOptions: AndroidOptions(
-          encryptedSharedPreferences: true,
           resetOnError: true,
         ),
       );

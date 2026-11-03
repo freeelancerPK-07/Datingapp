@@ -127,15 +127,17 @@ class ApiService {
     String? phone,
   }) async {
     try {
+      final payload = <String, dynamic>{
+        'email': email,
+        'password': password,
+      };
+      if (name != null && name.isNotEmpty) payload['name'] = name;
+      if (phone != null && phone.isNotEmpty) payload['phone'] = phone;
+
       final res = await http.post(
         Uri.parse('$baseUrl/auth/register'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-          if (name != null) 'name': name,
-          if (phone != null) 'phone': phone,
-        }),
+        body: jsonEncode(payload),
       );
       final data = jsonDecode(res.body);
       if (data['success'] == true && data['token'] != null) {

@@ -29,7 +29,6 @@ class AppState extends ChangeNotifier {
 
   static const FlutterSecureStorage _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
       resetOnError: true,
     ),
   );

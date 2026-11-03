@@ -101,7 +101,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     if (AppState.instance.backendUserId == null) {
       const storage = FlutterSecureStorage(
         aOptions: AndroidOptions(
-          encryptedSharedPreferences: true,
           resetOnError: true,
         ),
       );
@@ -273,7 +272,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       try {
         const storage = FlutterSecureStorage(
           aOptions: AndroidOptions(
-            encryptedSharedPreferences: true,
             resetOnError: true,
           ),
         );

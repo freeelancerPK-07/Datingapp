@@ -6,7 +6,6 @@ import 'package:version1/constants/app_icon_base64.dart';
 import 'package:version1/screens/home_screen.dart';
 import 'package:version1/screens/profile_setup_screen.dart';
 import 'package:version1/screens/signup_screen.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:version1/services/app_state.dart';
 import 'package:version1/services/api_service.dart';
 
