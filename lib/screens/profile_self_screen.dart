@@ -189,7 +189,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
     );
   }
 
-  void _showAddPhotoSheet(BuildContext context, AppState appState) {
+  void _showAddPhotoSheet(AppState appState) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1407,7 +1407,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                     if (i == profile.galleryPhotos.length) {
                       // Add Photo Card
                       return GestureDetector(
-                        onTap: () => _showAddPhotoSheet(context, appState),
+                        onTap: () => _showAddPhotoSheet(appState),
                         child: Container(
                           width: 95,
                           height: 130,
