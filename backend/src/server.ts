@@ -10,6 +10,8 @@ import { creatorRouter } from './routes/creator.routes.js';
 import { walletRouter } from './routes/wallet.routes.js';
 import { callRouter } from './routes/call.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
+import { uploadRouter } from './routes/upload.routes.js';
+import path from 'path';
 import { chatRouter } from './routes/chat.routes.js';
 import { callBillingManager } from './services/call-billing.manager.js';
 
@@ -28,9 +30,14 @@ export const io = new SocketIOServer(server, {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Serve uploaded media files publicly
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // API Routes
+app.use('/api/v1/upload', uploadRouter);
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/profile', profileRouter);
 app.use('/api/v1/creators', creatorRouter);

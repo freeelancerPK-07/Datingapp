@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
 
 export const creatorRouter = Router();
@@ -34,13 +36,16 @@ creatorRouter.get('/', async (_req, res) => {
 
     const formatted = creators
       .map((c) => {
-        const photo = c.user.profile?.avatarUrl || c.user.creatorApplications?.[0]?.photoUrl || '';
+        const gallery = c.user.profile?.galleryPhotos || [];
+        const photo = c.user.profile?.avatarUrl || c.user.creatorApplications?.[0]?.photoUrl || (gallery.length > 0 ? gallery[0] : '');
+        const allPhotos = gallery.length > 0 ? gallery : (photo ? [photo] : []);
         return {
           id: c.id,
           userId: c.userId,
           name: c.user.profile?.name || c.user.creatorApplications?.[0]?.legalName || 'Creator',
           age: c.age || 23,
           photoUrl: photo,
+          galleryPhotos: allPhotos,
           isOnline: c.isOnline,
           isVerified: c.user.isVerified,
           bio: c.user.profile?.bio || c.user.creatorApplications?.[0]?.bio || '',
@@ -174,6 +179,7 @@ creatorRouter.post('/apply', async (req, res) => {
       profession = 'Lifestyle & Dating',
       bio,
       photoUrl,
+      galleryPhotos = [],
       govtIdType = 'Aadhaar Card',
       govtIdFrontUrl,
       govtIdBackUrl,
@@ -187,19 +193,35 @@ creatorRouter.post('/apply', async (req, res) => {
       subscriptionPlan = 'MONTHLY_299',
     } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({ success: false, error: 'userId is required' });
+    let targetUserId = userId;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const decoded = jwt.verify(authHeader.substring(7), process.env.JWT_SECRET || 'linkup_super_secret_jwt_key_2026_secured') as any;
+        if (decoded?.userId) {
+          targetUserId = decoded.userId;
+        }
+      } catch (_) {}
+    }
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUserId);
+    if (!isUuid) {
+      const existing = await prisma.user.findFirst({
+        include: { profile: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      targetUserId = existing ? existing.id : crypto.randomUUID();
     }
 
     let user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: targetUserId },
       include: { profile: true },
     });
 
     if (!user) {
       user = await prisma.user.create({
         data: {
-          id: userId,
+          id: targetUserId,
           phone: `+91${Math.floor(6000000000 + Math.random() * 3999999999)}`,
           role: 'USER',
           profile: {
@@ -207,6 +229,7 @@ creatorRouter.post('/apply', async (req, res) => {
               name: legalName || 'Creator Applicant',
               bio: bio || '',
               avatarUrl: photoUrl || '',
+              galleryPhotos: Array.isArray(galleryPhotos) ? galleryPhotos.filter(Boolean) : [],
             },
           },
         },
@@ -215,7 +238,7 @@ creatorRouter.post('/apply', async (req, res) => {
     }
 
     const existingApp = await prisma.creatorApplication.findFirst({
-      where: { userId },
+      where: { userId: targetUserId },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -248,17 +271,19 @@ creatorRouter.post('/apply', async (req, res) => {
         })
       : await prisma.creatorApplication.create({
           data: {
-            userId,
+            userId: targetUserId,
             ...appData,
           },
         });
 
-    if (bio || photoUrl) {
+    const parsedGallery = Array.isArray(galleryPhotos) ? galleryPhotos.filter(Boolean) : [];
+    if (bio || photoUrl || parsedGallery.length > 0) {
       await prisma.userProfile.updateMany({
-        where: { userId },
+        where: { userId: targetUserId },
         data: {
           ...(bio && { bio }),
           ...(photoUrl && { avatarUrl: photoUrl }),
+          ...(parsedGallery.length > 0 && { galleryPhotos: parsedGallery }),
         },
       });
     }

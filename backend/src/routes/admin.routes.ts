@@ -156,17 +156,21 @@ adminRouter.post('/creators/:applicationId/approve', async (req, res) => {
       },
     });
 
-    // 4. Update User Profile with legalName and photoUrl if present
-    if (application.legalName || application.photoUrl) {
-      await prisma.userProfile.updateMany({
-        where: { userId: application.userId },
-        data: {
-          ...(application.legalName && { name: application.legalName }),
-          ...(application.photoUrl && { avatarUrl: application.photoUrl }),
-          ...(application.bio && { bio: application.bio }),
-        },
-      });
-    }
+    // 4. Update User Profile with legalName, photoUrl, and galleryPhotos
+    const userProf = await prisma.userProfile.findUnique({ where: { userId: application.userId } });
+    const existingGallery = userProf?.galleryPhotos || [];
+    const appPhoto = application.photoUrl;
+    const finalGallery = existingGallery.length > 0 ? existingGallery : (appPhoto ? [appPhoto] : []);
+
+    await prisma.userProfile.updateMany({
+      where: { userId: application.userId },
+      data: {
+        ...(application.legalName && { name: application.legalName }),
+        ...(application.photoUrl && { avatarUrl: application.photoUrl }),
+        ...(application.bio && { bio: application.bio }),
+        galleryPhotos: finalGallery,
+      },
+    });
 
     console.log(`[ADMIN] Creator application ${applicationId} approved. Creator ${creator.id} is now LIVE on app!`);
 

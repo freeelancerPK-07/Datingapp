@@ -76,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'image': c.photoUrl.isNotEmpty
           ? c.photoUrl
           : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=80',
+      'galleryPhotos': c.galleryPhotos.isNotEmpty ? c.galleryPhotos : [c.photoUrl],
       'avatar': c.photoUrl.isNotEmpty
           ? c.photoUrl
           : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
@@ -254,96 +255,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   void _showAdvancedFiltersSheet() {
     List<String> tempLanguages = List.from(_selectedLanguages);
     String tempGender = _selectedGender;
@@ -1286,7 +1197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Discover your next connection • Recharge Diamonds',
+                    'Discover your next connection â€¢ Recharge Diamonds',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -1478,7 +1389,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${creator['profession']} • ${creator['location']}',
+                          '${creator['profession']} â€¢ ${creator['location']}',
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                           style: GoogleFonts.plusJakartaSans(
@@ -1526,86 +1437,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Main Media Photo with Tap to Open Detail Page & Double-Tap to Like
-          GestureDetector(
-            onDoubleTap: () => _toggleLike(creator),
+          // Main Media Carousel: Swipes across all 6 photos with dots + badges
+          CreatorMediaCarousel(
+            photos: (creator['galleryPhotos'] as List<dynamic>?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                [creator['image'] as String],
+            distance: creator['distance'] as String? ?? '2km',
+            rating: creator['rating'] as String? ?? '4.9',
             onTap: () => _openCreatorProfile(creator),
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: AspectRatio(
-                    aspectRatio: 1.05,
-                    child: Image.network(
-                      creator['image'],
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: const Color(0xFFE5F7F4),
-                        child: const Center(
-                          child: Icon(Icons.person, size: 64, color: LinkUpTheme.primaryTeal),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Top Right Distance Pill
-                Positioned(
-                  top: 14,
-                  right: 14,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.location_on_rounded, color: LinkUpTheme.primaryTeal, size: 13),
-                        const SizedBox(width: 4),
-                        Text(
-                          '(${creator['distance']})',
-                          style: GoogleFonts.plusJakartaSans(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Bottom Left Rating Pill
-                Positioned(
-                  bottom: 14,
-                  left: 14,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.star_rounded, color: Color(0xFFFFD43B), size: 15),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${creator['rating']}',
-                          style: GoogleFonts.plusJakartaSans(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            onDoubleTap: () => _toggleLike(creator),
           ),
 
           // Action Row (Like, Chat, Book Video Call CTA, Save)
@@ -1749,7 +1590,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 children: [
                   Text(
-                    'View Profile →',
+                    'View Profile â†’',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       color: LinkUpTheme.primaryTeal,
@@ -1839,4 +1680,181 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 }
+}
+
+class CreatorMediaCarousel extends StatefulWidget {
+  final List<String> photos;
+  final String distance;
+  final String rating;
+  final VoidCallback onTap;
+  final VoidCallback onDoubleTap;
+
+  const CreatorMediaCarousel({
+    super.key,
+    required this.photos,
+    required this.distance,
+    required this.rating,
+    required this.onTap,
+    required this.onDoubleTap,
+  });
+
+  @override
+  State<CreatorMediaCarousel> createState() => _CreatorMediaCarouselState();
+}
+
+class _CreatorMediaCarouselState extends State<CreatorMediaCarousel> {
+  int _currentIndex = 0;
+  final PageController _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final validPhotos = widget.photos.where((p) => p.trim().isNotEmpty).toList();
+    final displayPhotos = validPhotos.isNotEmpty
+        ? validPhotos
+        : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=80'];
+
+    return GestureDetector(
+      onDoubleTap: widget.onDoubleTap,
+      onTap: widget.onTap,
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: AspectRatio(
+              aspectRatio: 1.05,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: displayPhotos.length,
+                onPageChanged: (idx) => setState(() => _currentIndex = idx),
+                itemBuilder: (context, index) {
+                  return Image.network(
+                    displayPhotos[index],
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: const Color(0xFFE5F7F4),
+                      child: const Center(
+                        child: Icon(Icons.person, size: 64, color: LinkUpTheme.primaryTeal),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+
+          // Top Segmented Dots Indicator (like Instagram / Tinder)
+          if (displayPhotos.length > 1)
+            Positioned(
+              top: 10,
+              left: 14,
+              right: 80, // room for distance pill
+              child: Row(
+                children: List.generate(
+                  displayPhotos.length,
+                  (idx) => Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      height: 3.5,
+                      decoration: BoxDecoration(
+                        color: _currentIndex == idx
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(3),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black26, blurRadius: 2),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Top Right Distance Pill
+          Positioned(
+            top: 14,
+            right: 14,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.65),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.location_on_rounded, color: LinkUpTheme.primaryTeal, size: 13),
+                  const SizedBox(width: 4),
+                  Text(
+                    '(${widget.distance})',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Bottom Left Rating Pill
+          Positioned(
+            bottom: 14,
+            left: 14,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.65),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.star_rounded, color: Color(0xFFFFD43B), size: 15),
+                  const SizedBox(width: 4),
+                  Text(
+                    widget.rating,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Bottom Right Photo Counter (e.g. 1/6)
+          if (displayPhotos.length > 1)
+            Positioned(
+              bottom: 14,
+              right: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_currentIndex + 1}/${displayPhotos.length}',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }

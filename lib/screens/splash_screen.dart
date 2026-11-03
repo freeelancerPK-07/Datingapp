@@ -82,34 +82,47 @@ class _SplashScreenState extends State<SplashScreen>
         ApiService.instance.setAuthToken(token);
         AppState.instance.setBackendUserId(userId);
 
-        bool isCompleted = isCompletedStr == 'true';
         try {
-          final meRes = await ApiService.instance.getMe(userId: userId).timeout(const Duration(seconds: 3));
-          if (meRes['success'] == true) {
+          final meRes = await ApiService.instance.getMe(userId: userId).timeout(const Duration(seconds: 4));
+          if (meRes['success'] == true && meRes['user'] != null) {
+            final userMap = meRes['user'] as Map<String, dynamic>;
+            bool isCompleted = meRes['isProfileCompleted'] == true || isCompletedStr == 'true';
             if (meRes['isProfileCompleted'] != null) {
               isCompleted = meRes['isProfileCompleted'] == true;
               await storage.write(key: 'is_profile_completed', value: isCompleted ? 'true' : 'false');
             }
-            final userMap = meRes['user'] as Map<String, dynamic>?;
-            if (userMap != null) {
-              final profile = userMap['profile'] as Map<String, dynamic>?;
-              if (profile != null) {
-                AppState.instance.restoreUserProfileFromDb(profile);
-              }
-              if (userMap['isCreator'] == true) {
-                AppState.instance.setCreatorStatus(true);
-              }
+            final profile = userMap['profile'] as Map<String, dynamic>?;
+            if (profile != null) {
+              AppState.instance.restoreUserProfileFromDb(profile);
             }
+            if (userMap['isCreator'] == true) {
+              AppState.instance.setCreatorStatus(true);
+            }
+            AppState.instance.setProfileCompleted(isCompleted);
+
+            if (isCompleted) {
+              targetScreen = const HomeScreen();
+            } else {
+              targetScreen = const ProfileSetupScreen();
+            }
+          } else {
+            // User was deleted from DB! Completely clear session and land on WelcomeScreen
+            debugPrint('[SplashScreen] User not found or deleted from DB. Resetting to WelcomeScreen.');
+            await storage.deleteAll();
+            ApiService.instance.clearAuthToken();
+            await AppState.instance.logout();
+            targetScreen = const WelcomeScreen();
           }
-        } catch (_) {}
-
-        AppState.instance.setProfileCompleted(isCompleted);
-
-        if (isCompleted) {
-          targetScreen = const HomeScreen();
-        } else {
-          targetScreen = const ProfileSetupScreen();
+        } catch (err) {
+          debugPrint('[SplashScreen] Backend check error: $err');
+          if (isCompletedStr == 'true') {
+            targetScreen = const HomeScreen();
+          } else {
+            targetScreen = const WelcomeScreen();
+          }
         }
+      } else {
+        targetScreen = const WelcomeScreen();
       }
     } catch (e) {
       debugPrint('[SplashScreen] Auth check error: $e');

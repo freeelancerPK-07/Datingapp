@@ -1168,7 +1168,7 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                             label: Text(
                               'Edit Profile',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13,
+                                fontSize: 13,0
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF007A78),
                               ),

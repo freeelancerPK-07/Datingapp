@@ -960,8 +960,8 @@ export default function App() {
                                 <tr key={c.id} className="hover:bg-slate-50/70 transition-all">
                                   <td className="py-3.5 px-3">
                                     <div className="flex items-center gap-3">
-                                      <img
-                                        src={c.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
+                                      <AvatarImage
+                                        src={c.photoUrl}
                                         alt={c.name}
                                         className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-100 shadow-sm"
                                       />
@@ -1011,17 +1011,11 @@ export default function App() {
                                 <tr key={u.id} className="hover:bg-slate-50/70 transition-all">
                                   <td className="py-3.5 px-3">
                                     <div className="flex items-center gap-3">
-                                      {u.avatarUrl ? (
-                                        <img
-                                          src={u.avatarUrl}
-                                          alt={u.name}
-                                          className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-100"
-                                        />
-                                      ) : (
-                                        <div className="w-10 h-10 rounded-full bg-slate-900 text-white font-black text-xs flex items-center justify-center">
-                                          {u.name.substring(0, 2).toUpperCase()}
-                                        </div>
-                                      )}
+                                      <AvatarImage
+                                        src={u.avatarUrl}
+                                        alt={u.name}
+                                        className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-100 shadow-sm"
+                                      />
                                       <div>
                                         <p className="font-black text-slate-900 text-sm">{u.name}</p>
                                         <p className="text-[11px] text-slate-400">{u.phone || u.email || `ID: ${u.id.substring(0, 8)}...`}</p>
@@ -1127,8 +1121,8 @@ export default function App() {
                             className="p-4 bg-slate-50 border border-slate-200/70 rounded-2xl space-y-3"
                           >
                             <div className="flex items-start gap-3">
-                              <img
-                                src={app.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
+                              <AvatarImage
+                                src={app.photoUrl}
                                 alt={app.legalName}
                                 className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow-sm shrink-0"
                               />
@@ -1222,17 +1216,11 @@ export default function App() {
                           <tr key={u.id} className="hover:bg-slate-50/70 transition-all">
                             <td className="py-4 px-4">
                               <div className="flex items-center gap-3.5">
-                                {u.avatarUrl ? (
-                                  <img
-                                    src={u.avatarUrl}
-                                    alt={u.name}
-                                    className="w-11 h-11 rounded-full object-cover ring-2 ring-slate-100 shadow-sm"
-                                  />
-                                ) : (
-                                  <div className="w-11 h-11 rounded-full bg-slate-900 text-white font-black text-sm flex items-center justify-center">
-                                    {u.name.substring(0, 2).toUpperCase()}
-                                  </div>
-                                )}
+                                <AvatarImage
+                                  src={u.avatarUrl}
+                                  alt={u.name}
+                                  className="w-11 h-11 rounded-full object-cover ring-2 ring-slate-100 shadow-sm"
+                                />
                                 <div>
                                   <p className="font-black text-slate-900 text-sm">{u.name}</p>
                                   <p className="text-[11px] text-slate-400 font-mono">ID: {u.id.substring(0, 8)}...</p>
@@ -1354,8 +1342,8 @@ export default function App() {
                           className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4"
                         >
                           <div className="flex items-start gap-4">
-                            <img
-                              src={app.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
+                            <AvatarImage
+                              src={app.photoUrl}
                               alt={app.legalName}
                               className="w-16 h-16 rounded-2xl object-cover ring-2 ring-slate-100 shadow-md"
                             />
@@ -1440,7 +1428,7 @@ export default function App() {
                           <tr key={c.id} className="hover:bg-slate-50/70 transition-all">
                             <td className="py-4 px-4">
                               <div className="flex items-center gap-3.5">
-                                <img
+                                <AvatarImage
                                   src={c.photoUrl}
                                   alt={c.name}
                                   className="w-12 h-12 rounded-full object-cover ring-2 ring-slate-100 shadow-sm"
@@ -1957,5 +1945,52 @@ function SidebarPill({
         </span>
       )}
     </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Bulletproof Avatar Image Component (With Initial Gradient Fallback)
+// ---------------------------------------------------------------------------
+function AvatarImage({
+  src,
+  alt,
+  className = 'w-10 h-10 rounded-full object-cover',
+}: {
+  src?: string | null;
+  alt: string;
+  className?: string;
+}) {
+  const [hasError, setHasError] = useState(false);
+
+  const cleanUrl =
+    src &&
+    typeof src === 'string' &&
+    src.trim().length > 0 &&
+    !src.startsWith('/data/') &&
+    !src.startsWith('file:') &&
+    !src.startsWith('content:')
+      ? src.startsWith('/uploads/')
+        ? src
+        : src
+      : '';
+
+  if (!cleanUrl || hasError) {
+    const initial = (alt && alt.trim().length > 0 ? alt.trim()[0] : 'U').toUpperCase();
+    return (
+      <div
+        className={`${className} bg-gradient-to-tr from-slate-900 to-indigo-700 text-white font-black text-sm flex items-center justify-center ring-2 ring-slate-100 shadow-sm shrink-0 select-none`}
+      >
+        {initial}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={cleanUrl}
+      alt={alt}
+      onError={() => setHasError(true)}
+      className={`${className} shrink-0`}
+    />
   );
 }

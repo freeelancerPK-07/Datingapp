@@ -4,6 +4,7 @@ class CreatorModel {
   final String name;
   final int age;
   final String photoUrl;
+  final List<String> galleryPhotos;
   final bool isOnline;
   final bool isVerified;
   final bool isActive;
@@ -30,6 +31,7 @@ class CreatorModel {
     required this.name,
     required this.age,
     required this.photoUrl,
+    this.galleryPhotos = const [],
     this.isOnline = true,
     this.isVerified = true,
     this.isActive = true,
@@ -52,12 +54,25 @@ class CreatorModel {
   });
 
   factory CreatorModel.fromJson(Map<String, dynamic> json) {
+    final photo = (json['photoUrl'] as String?) ?? '';
+    List<String> gallery = [];
+    if (json['galleryPhotos'] is List) {
+      gallery = (json['galleryPhotos'] as List)
+          .map((e) => e.toString())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    if (gallery.isEmpty && photo.isNotEmpty) {
+      gallery = [photo];
+    }
+
     return CreatorModel(
       id: json['id'] ?? '',
       userId: json['userId'],
       name: json['name'] ?? 'Creator',
       age: json['age'] ?? 23,
-      photoUrl: json['photoUrl'] ?? '',
+      photoUrl: photo,
+      galleryPhotos: gallery,
       isOnline: json['isOnline'] ?? true,
       isVerified: json['isVerified'] ?? true,
       isActive: json['isActive'] ?? true,

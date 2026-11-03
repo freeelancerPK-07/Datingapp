@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { generateAgoraTokens, AGORA_APP_ID } from '../lib/agora.js';
 
 export const callRouter = Router();
 
@@ -60,9 +61,11 @@ callRouter.post('/initiate', async (req, res) => {
       });
     }
 
-    // 4. Generate unique Agora Channel Name & RTC Token
-    const agoraChannel = `call_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    const agoraToken = `mock_agora_token_${Date.now()}`; // Will use agora-token builder with real AppId
+    // 4. Generate unique Agora Channel Name & Production RTC Tokens
+    const safeCallerId = String(callerId).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+    const safeCreatorId = String(creatorId).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+    const agoraChannel = `call_${safeCallerId}_${safeCreatorId}_${Date.now()}`;
+    const tokens = generateAgoraTokens(agoraChannel, 0, 1, 7200);
 
     // 5. Create CallSession in Database
     const callSession = await prisma.callSession.create({
@@ -79,8 +82,11 @@ callRouter.post('/initiate', async (req, res) => {
     return res.json({
       success: true,
       callId: callSession.id,
-      agoraChannel,
-      agoraToken,
+      agoraAppId: tokens.appId,
+      agoraChannel: tokens.channelName,
+      agoraToken: tokens.callerToken,
+      callerToken: tokens.callerToken,
+      creatorToken: tokens.creatorToken,
       ratePerMin,
       creator: {
         name: creator.user.profile?.name,

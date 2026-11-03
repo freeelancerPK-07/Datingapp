@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/constants/svg_assets.dart';
 import 'package:version1/services/api_service.dart';
 import 'package:version1/services/app_state.dart';
+import 'package:version1/widgets/app_image.dart';
 
 class BecomeCreatorScreen extends StatefulWidget {
   const BecomeCreatorScreen({super.key});
@@ -20,6 +22,11 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
   String _applicationStatus = 'NOT_APPLIED'; // NOT_APPLIED, PENDING_VERIFICATION, APPROVED, REJECTED
   Map<String, dynamic>? _applicationData;
   String? _rejectionReason;
+
+  // Direct Image Upload States
+  String _profilePhoto = '';
+  final List<String> _showcasePhotos = [];
+  bool _isUploadingPhoto = false;
 
   // Form Controllers
   late final TextEditingController _photoUrlController;
@@ -173,6 +180,123 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
     }
   }
 
+  Future<void> _pickProfilePhoto() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt_rounded, color: LinkUpTheme.primaryTeal),
+                title: Text('Take Photo with Camera', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final path = await AppImagePickerService.pickFromCamera();
+                  if (path != null) _uploadAndSetProfilePhoto(path);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded, color: LinkUpTheme.primaryTeal),
+                title: Text('Choose from Gallery', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final path = await AppImagePickerService.pickFromGallery();
+                  if (path != null) _uploadAndSetProfilePhoto(path);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _uploadAndSetProfilePhoto(String localPath) async {
+    setState(() => _isUploadingPhoto = true);
+    final uploadedUrl = await ApiService.instance.uploadImage(localPath);
+    if (mounted) {
+      setState(() {
+        _profilePhoto = uploadedUrl ?? localPath;
+        _photoUrlController.text = _profilePhoto;
+        _isUploadingPhoto = false;
+        if (!_showcasePhotos.contains(_profilePhoto) && _showcasePhotos.length < 6) {
+          _showcasePhotos.insert(0, _profilePhoto);
+        }
+      });
+    }
+  }
+
+  Future<void> _pickShowcasePhoto(int slotIndex) async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt_rounded, color: LinkUpTheme.primaryTeal),
+                title: Text('Take Photo with Camera', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final path = await AppImagePickerService.pickFromCamera();
+                  if (path != null) _uploadAndSetShowcasePhoto(slotIndex, path);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded, color: LinkUpTheme.primaryTeal),
+                title: Text('Choose from Gallery', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final path = await AppImagePickerService.pickFromGallery();
+                  if (path != null) _uploadAndSetShowcasePhoto(slotIndex, path);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _uploadAndSetShowcasePhoto(int slotIndex, String localPath) async {
+    setState(() => _isUploadingPhoto = true);
+    final uploadedUrl = await ApiService.instance.uploadImage(localPath);
+    final finalUrl = uploadedUrl ?? localPath;
+    if (mounted) {
+      setState(() {
+        if (slotIndex < _showcasePhotos.length) {
+          _showcasePhotos[slotIndex] = finalUrl;
+        } else if (_showcasePhotos.length < 6) {
+          _showcasePhotos.add(finalUrl);
+        }
+        if (_profilePhoto.isEmpty) {
+          _profilePhoto = finalUrl;
+          _photoUrlController.text = finalUrl;
+        }
+        _isUploadingPhoto = false;
+      });
+    }
+  }
+
+  void _removeShowcasePhoto(int index) {
+    setState(() {
+      if (index < _showcasePhotos.length) {
+        _showcasePhotos.removeAt(index);
+      }
+    });
+  }
+
   Future<void> _submitApplication() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -185,9 +309,33 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
     final videoPrice = int.tryParse(_videoPriceController.text.trim()) ?? 500;
     final voicePrice = int.tryParse(_voicePriceController.text.trim()) ?? 300;
 
-    final photoUrl = _photoUrlController.text.trim();
-
     setState(() => _isSubmitting = true);
+
+    // Ensure all showcase photos are uploaded
+    List<String> finalGallery = [];
+    for (final p in _showcasePhotos) {
+      if (!p.startsWith('http')) {
+        final up = await ApiService.instance.uploadImage(p);
+        finalGallery.add(up ?? p);
+      } else {
+        finalGallery.add(p);
+      }
+    }
+
+    String finalPhoto = _profilePhoto.isNotEmpty ? _profilePhoto : _photoUrlController.text.trim();
+    if (finalPhoto.isEmpty && finalGallery.isNotEmpty) {
+      finalPhoto = finalGallery.first;
+    }
+    if (finalPhoto.isNotEmpty && !finalPhoto.startsWith('http')) {
+      final up = await ApiService.instance.uploadImage(finalPhoto);
+      finalPhoto = up ?? finalPhoto;
+    }
+    if (finalPhoto.isEmpty) {
+      finalPhoto = AppState.instance.userPhoto;
+    }
+    if (finalGallery.isEmpty && finalPhoto.isNotEmpty) {
+      finalGallery = [finalPhoto];
+    }
 
     final userId = await _resolveUserId();
 
@@ -199,7 +347,8 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
       videoCallPrice: videoPrice,
       voiceCallPrice: voicePrice,
       bio: bio,
-      photoUrl: photoUrl.isNotEmpty ? photoUrl : AppState.instance.userPhoto,
+      photoUrl: finalPhoto,
+      galleryPhotos: finalGallery,
       govtIdType: _selectedGovtIdType,
       socialHandle: social,
       payoutUpiId: payoutUpi,
@@ -297,7 +446,7 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
   // View 1: Application Under Review (Real-Time Admin Queue Gate)
   // ---------------------------------------------------------------------------
   Widget _buildPendingReviewView() {
-    final planName = _selectedPlan == 'MONTHLY_299' ? 'Monthly Creator Pass (₹299/mo)' : 'Annual VIP Creator (₹2,499/yr)';
+    final planName = _selectedPlan == 'MONTHLY_299' ? 'Monthly Creator Pass (â‚¹299/mo)' : 'Annual VIP Creator (â‚¹2,499/yr)';
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -704,7 +853,7 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
           _buildPlanOption(
             id: 'MONTHLY_299',
             title: 'Monthly Creator Pass',
-            price: '₹299 / month',
+            price: 'â‚¹299 / month',
             subtitle: 'Direct onboarding & 70% caller earnings split',
             badge: 'POPULAR',
           ),
@@ -712,7 +861,7 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
           _buildPlanOption(
             id: 'YEARLY_2499',
             title: 'Annual VIP Creator',
-            price: '₹2,499 / year',
+            price: 'â‚¹2,499 / year',
             subtitle: 'Priority verification queue + VIP verified badge on feed',
             badge: 'SAVE 30%',
           ),
@@ -720,67 +869,98 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
           const SizedBox(height: 24),
 
           // Section: KYC & Background Verification
-          _buildSectionTitle('Background Verification (KYC)'),
-          const SizedBox(height: 12),
+          _buildSectionTitle('Creator Profile Picture & 6 Showcase Photos'),
+          const SizedBox(height: 6),
+          Text(
+            'Your profile photo and up to 6 showcase photos will appear on the Home Screen for users to swipe through.',
+            style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF6B7280)),
+          ),
+          const SizedBox(height: 14),
 
-          // Original Profile Photo
+          // 1. Primary Profile Photo Card
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: const Color(0xFFF9FAFB),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0xFFE5E7EB)),
             ),
             child: Row(
               children: [
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _photoUrlController,
-                  builder: (context, value, _) {
-                    final photo = value.text.trim().isNotEmpty ? value.text.trim() : AppState.instance.userPhoto;
-                    return Container(
-                      width: 58,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: LinkUpTheme.primaryTeal, width: 2),
+                GestureDetector(
+                  onTap: _pickProfilePhoto,
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: LinkUpTheme.primaryTeal, width: 2.5),
+                        ),
+                        child: ClipOval(
+                          child: _profilePhoto.isNotEmpty
+                              ? (_profilePhoto.startsWith('http')
+                                  ? Image.network(
+                                      _profilePhoto,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 38, color: LinkUpTheme.primaryTeal),
+                                    )
+                                  : Image.file(
+                                      File(_profilePhoto),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 38, color: LinkUpTheme.primaryTeal),
+                                    ))
+                              : const Icon(Icons.person, size: 38, color: LinkUpTheme.primaryTeal),
+                        ),
                       ),
-                      child: ClipOval(
-                        child: photo.isNotEmpty
-                            ? Image.network(
-                                photo,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 32, color: LinkUpTheme.primaryTeal),
-                              )
-                            : const Icon(Icons.person, size: 32, color: LinkUpTheme.primaryTeal),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: const BoxDecoration(
+                            color: LinkUpTheme.primaryTeal,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 14),
+                        ),
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Creator Profile Picture',
+                        'Primary Profile Photo',
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: LinkUpTheme.darkSlate,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 4),
                       Text(
-                        'Original photo that appears on Home feed',
+                        'Main picture seen on creator card',
                         style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF6B7280)),
                       ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: _photoUrlController,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600),
-                        decoration: _inputDecoration(
-                          hint: 'Paste Image URL (or uses current avatar)',
-                          icon: Icons.camera_alt_outlined,
+                      const SizedBox(height: 10),
+                      ElevatedButton.icon(
+                        onPressed: _pickProfilePhoto,
+                        icon: const Icon(Icons.add_a_photo_rounded, size: 14),
+                        label: Text(
+                          _profilePhoto.isNotEmpty ? 'Change Photo' : 'Upload Photo',
+                          style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: LinkUpTheme.primaryTeal,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
                     ],
@@ -789,6 +969,120 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 16),
+
+          // 2. 6-Photos Showcase Grid
+          _buildSectionTitle('Showcase Gallery (6 Photos for Home Feed)'),
+          const SizedBox(height: 10),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 6,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 0.85,
+            ),
+            itemBuilder: (context, index) {
+              final hasPhoto = index < _showcasePhotos.length;
+              final photo = hasPhoto ? _showcasePhotos[index] : null;
+
+              if (hasPhoto && photo != null) {
+                return Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        width: double.infinity,
+                        height: double.infinity,
+                        color: const Color(0xFFE5E7EB),
+                        child: photo.startsWith('http')
+                            ? Image.network(
+                                photo,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(Icons.broken_image, color: Colors.grey),
+                                ),
+                              )
+                            : Image.file(
+                                File(photo),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(Icons.broken_image, color: Colors.grey),
+                                ),
+                              ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: GestureDetector(
+                        onTap: () => _removeShowcasePhoto(index),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close_rounded, color: Colors.white, size: 14),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 4,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '#${index + 1}',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return GestureDetector(
+                onTap: () => _pickShowcasePhoto(index),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9FAFB),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: const Color(0xFFCBD5E1),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.add_photo_alternate_outlined, color: LinkUpTheme.primaryTeal, size: 24),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Photo ${index + 1}',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
           const SizedBox(height: 12),
 
           // Legal Name
@@ -1058,8 +1352,8 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
                     )
                   : Text(
                       _selectedPlan == 'MONTHLY_299'
-                          ? 'Submit for Admin Verification (₹299)'
-                          : 'Submit for Admin Verification (₹2,499)',
+                          ? 'Submit for Admin Verification (â‚¹299)'
+                          : 'Submit for Admin Verification (â‚¹2,499)',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,

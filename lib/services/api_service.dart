@@ -339,6 +339,7 @@ class ApiService {
     int voiceCallPrice = 300,
     String? bio,
     String? photoUrl,
+    List<String>? galleryPhotos,
     String govtIdType = 'Aadhaar Card',
     String? socialHandle,
     String? payoutUpiId,
@@ -359,6 +360,7 @@ class ApiService {
           'voiceCallPrice': voiceCallPrice,
           'bio': bio,
           'photoUrl': photoUrl,
+          'galleryPhotos': galleryPhotos ?? [],
           'govtIdType': govtIdType,
           'socialHandle': socialHandle,
           'payoutUpiId': payoutUpiId,
@@ -459,6 +461,47 @@ class ApiService {
     } catch (e) {
       debugPrint('[ApiService] Delete account error: $e');
       return false;
+    }
+  }
+
+  /// Uploads a local image file to backend server and returns the accessible URL
+  Future<String?> uploadImage(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        debugPrint('[ApiService] File does not exist at $filePath');
+        return null;
+      }
+      final bytes = await file.readAsBytes();
+      final base64Image = base64Encode(bytes);
+      final filename = filePath.split(Platform.pathSeparator).last;
+
+      final res = await http.post(
+        Uri.parse('$baseUrl/upload/image'),
+        headers: _headers,
+        body: jsonEncode({
+          'image': base64Image,
+          'filename': filename,
+        }),
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true) {
+          final serverUrl = data['url'] as String?;
+          final relativeUrl = data['relativeUrl'] as String?;
+          if (serverUrl != null && serverUrl.startsWith('http')) {
+            return serverUrl;
+          }
+          final rootBase = baseUrl.replaceAll('/api/v1', '');
+          return '$rootBase$relativeUrl';
+        }
+      }
+      debugPrint('[ApiService] Upload failed with status: ${res.statusCode} ${res.body}');
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] Upload image error: $e');
+      return null;
     }
   }
 }
