@@ -296,7 +296,6 @@ adminRouter.post('/creators/create-direct', async (req, res) => {
         profile: {
           create: {
             name: String(name).trim(),
-            age: Number(age) || 24,
             bio: bio ? String(bio).trim() : 'Official LinkUp Verified Creator',
             avatarUrl: photoUrl ? String(photoUrl).trim() : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
             isCompleted: true,

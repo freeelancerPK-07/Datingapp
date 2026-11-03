@@ -80,8 +80,9 @@ creatorRouter.get('/application-status', async (req, res) => {
       });
     }
 
-    const application = await prisma.creatorApplication.findUnique({
+    const application = await prisma.creatorApplication.findFirst({
       where: { userId: String(userId) },
+      orderBy: { createdAt: 'desc' },
     });
 
     if (!application) {
@@ -203,51 +204,44 @@ creatorRouter.post('/apply', async (req, res) => {
       });
     }
 
-    const application = await prisma.creatorApplication.upsert({
+    const existingApp = await prisma.creatorApplication.findFirst({
       where: { userId },
-      update: {
-        legalName: legalName || user.profile?.name || 'Applicant',
-        age: Number(age) || 21,
-        profession: String(profession).trim(),
-        bio: bio || user.profile?.bio || '',
-        photoUrl: photoUrl || user.profile?.avatarUrl || '',
-        govtIdType,
-        govtIdFrontUrl,
-        govtIdBackUrl,
-        selfieUrl,
-        socialHandle,
-        payoutUpiId: payoutUpiId || '',
-        videoCallPrice: Number(videoCallPrice) || 500,
-        voiceCallPrice: Number(voiceCallPrice) || 300,
-        languages: Array.isArray(languages) ? languages : ['English', 'Tamil'],
-        tags: Array.isArray(tags) ? tags : ['Lifestyle', 'Dating'],
-        subscriptionPlan,
-        subscriptionPaid: true,
-        status: 'PENDING_VERIFICATION',
-        rejectionReason: null,
-      },
-      create: {
-        userId,
-        legalName: legalName || user.profile?.name || 'Applicant',
-        age: Number(age) || 21,
-        profession: String(profession).trim(),
-        bio: bio || user.profile?.bio || '',
-        photoUrl: photoUrl || user.profile?.avatarUrl || '',
-        govtIdType,
-        govtIdFrontUrl,
-        govtIdBackUrl,
-        selfieUrl,
-        socialHandle,
-        payoutUpiId: payoutUpiId || '',
-        videoCallPrice: Number(videoCallPrice) || 500,
-        voiceCallPrice: Number(voiceCallPrice) || 300,
-        languages: Array.isArray(languages) ? languages : ['English', 'Tamil'],
-        tags: Array.isArray(tags) ? tags : ['Lifestyle', 'Dating'],
-        subscriptionPlan,
-        subscriptionPaid: true,
-        status: 'PENDING_VERIFICATION',
-      },
+      orderBy: { createdAt: 'desc' },
     });
+
+    const appData = {
+      legalName: legalName || user.profile?.name || 'Applicant',
+      age: Number(age) || 21,
+      profession: String(profession).trim(),
+      bio: bio || user.profile?.bio || '',
+      photoUrl: photoUrl || user.profile?.avatarUrl || '',
+      govtIdType,
+      govtIdFrontUrl,
+      govtIdBackUrl,
+      selfieUrl,
+      socialHandle,
+      payoutUpiId: payoutUpiId || '',
+      videoCallPrice: Number(videoCallPrice) || 500,
+      voiceCallPrice: Number(voiceCallPrice) || 300,
+      languages: Array.isArray(languages) ? languages : ['English', 'Tamil'],
+      tags: Array.isArray(tags) ? tags : ['Lifestyle', 'Dating'],
+      subscriptionPlan,
+      subscriptionPaid: true,
+      status: 'PENDING_VERIFICATION' as const,
+      rejectionReason: null,
+    };
+
+    const application = existingApp
+      ? await prisma.creatorApplication.update({
+          where: { id: existingApp.id },
+          data: appData,
+        })
+      : await prisma.creatorApplication.create({
+          data: {
+            userId,
+            ...appData,
+          },
+        });
 
     if (bio || photoUrl) {
       await prisma.userProfile.updateMany({
