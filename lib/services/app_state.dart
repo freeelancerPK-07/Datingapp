@@ -96,13 +96,25 @@ class AppState extends ChangeNotifier {
   Future<void> syncCreatorsFromBackend() async {
     try {
       final live = await ApiService.instance.fetchCreators();
-      if (live.isNotEmpty) {
-        _allCreators.clear();
-        _allCreators.addAll(live);
-        notifyListeners();
+      _allCreators.clear();
+      _allCreators.addAll(live);
+
+      if (_backendUserId != null) {
+        final appStatus = await ApiService.instance.getCreatorApplicationStatus(_backendUserId!);
+        if (appStatus['status'] == 'APPROVED') {
+          _isCreator = true;
+        }
       }
+      notifyListeners();
     } catch (_) {}
   }
+
+  void setCreatorStatus(bool val) {
+    _isCreator = val;
+    notifyListeners();
+  }
+
+  String get userPhoto => _userProfile.photoUrl;
 
   Future<void> syncWalletFromBackend() async {
     if (_backendUserId == null) return;

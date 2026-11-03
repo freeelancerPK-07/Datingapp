@@ -22,6 +22,7 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
   String? _rejectionReason;
 
   // Form Controllers
+  late final TextEditingController _photoUrlController;
   late final TextEditingController _legalNameController;
   late final TextEditingController _ageController;
   late final TextEditingController _payoutUpiController;
@@ -90,6 +91,7 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
     final appState = AppState.instance;
 
     _selectedCategory = _categories.first;
+    _photoUrlController = TextEditingController(text: appState.userPhoto);
     _legalNameController = TextEditingController(text: appState.userName.isNotEmpty ? appState.userName : '');
     _ageController = TextEditingController(text: '22');
     _payoutUpiController = TextEditingController(text: '');
@@ -105,6 +107,7 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
 
   @override
   void dispose() {
+    _photoUrlController.dispose();
     _legalNameController.dispose();
     _ageController.dispose();
     _payoutUpiController.dispose();
@@ -182,6 +185,8 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
     final videoPrice = int.tryParse(_videoPriceController.text.trim()) ?? 500;
     final voicePrice = int.tryParse(_voicePriceController.text.trim()) ?? 300;
 
+    final photoUrl = _photoUrlController.text.trim();
+
     setState(() => _isSubmitting = true);
 
     final userId = await _resolveUserId();
@@ -194,6 +199,7 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
       videoCallPrice: videoPrice,
       voiceCallPrice: voicePrice,
       bio: bio,
+      photoUrl: photoUrl.isNotEmpty ? photoUrl : AppState.instance.userPhoto,
       govtIdType: _selectedGovtIdType,
       socialHandle: social,
       payoutUpiId: payoutUpi,
@@ -717,6 +723,74 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
           _buildSectionTitle('Background Verification (KYC)'),
           const SizedBox(height: 12),
 
+          // Original Profile Photo
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: Row(
+              children: [
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _photoUrlController,
+                  builder: (context, value, _) {
+                    final photo = value.text.trim().isNotEmpty ? value.text.trim() : AppState.instance.userPhoto;
+                    return Container(
+                      width: 58,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: LinkUpTheme.primaryTeal, width: 2),
+                      ),
+                      child: ClipOval(
+                        child: photo.isNotEmpty
+                            ? Image.network(
+                                photo,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 32, color: LinkUpTheme.primaryTeal),
+                              )
+                            : const Icon(Icons.person, size: 32, color: LinkUpTheme.primaryTeal),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Creator Profile Picture',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: LinkUpTheme.darkSlate,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Original photo that appears on Home feed',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF6B7280)),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _photoUrlController,
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600),
+                        decoration: _inputDecoration(
+                          hint: 'Paste Image URL (or uses current avatar)',
+                          icon: Icons.camera_alt_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
           // Legal Name
           TextFormField(
             controller: _legalNameController,
@@ -1014,7 +1088,7 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
       onTap: () => setState(() => _selectedPlan = id),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFE6F4F1) : const Color(0xFFF9FAFB),
           borderRadius: BorderRadius.circular(18),
@@ -1023,64 +1097,68 @@ class _BecomeCreatorScreenState extends State<BecomeCreatorScreen> {
             width: isSelected ? 2 : 1,
           ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-              color: isSelected ? LinkUpTheme.primaryTeal : const Color(0xFF9CA3AF),
-              size: 22,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w800,
-                          color: LinkUpTheme.darkSlate,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isSelected ? LinkUpTheme.primaryTeal : const Color(0xFFE5E7EB),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          badge,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: isSelected ? Colors.white : const Color(0xFF4B5563),
-                          ),
-                        ),
-                      ),
-                    ],
+            Row(
+              children: [
+                Icon(
+                  isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                  color: isSelected ? LinkUpTheme.primaryTeal : const Color(0xFF9CA3AF),
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      color: LinkUpTheme.darkSlate,
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isSelected ? LinkUpTheme.primaryTeal : const Color(0xFFE5E7EB),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    badge,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: isSelected ? Colors.white : const Color(0xFF4B5563),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const SizedBox(width: 30),
+                Expanded(
+                  child: Text(
                     subtitle,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       color: const Color(0xFF6B7280),
+                      height: 1.3,
                     ),
                   ),
-                ],
-              ),
-            ),
-            Text(
-              price,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-                color: isSelected ? LinkUpTheme.primaryTeal : LinkUpTheme.darkSlate,
-              ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  price,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w900,
+                    color: isSelected ? LinkUpTheme.primaryTeal : LinkUpTheme.darkSlate,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

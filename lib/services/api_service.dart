@@ -388,4 +388,61 @@ class ApiService {
       return {'success': false, 'error': e.toString()};
     }
   }
+
+  Future<bool> toggleCreatorOnlineStatus(String userId, bool isOnline) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/creators/toggle-online'),
+        headers: _headers,
+        body: jsonEncode({
+          'userId': userId,
+          'isOnline': isOnline,
+        }),
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('[ApiService] Toggle online error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> updateCreatorRates({
+    required String userId,
+    int? videoCallPrice,
+    int? voiceCallPrice,
+    int? photoPrice,
+  }) async {
+    try {
+      final Map<String, dynamic> body = {'userId': userId};
+      if (videoCallPrice != null) body['videoCallPrice'] = videoCallPrice;
+      if (voiceCallPrice != null) body['voiceCallPrice'] = voiceCallPrice;
+      if (photoPrice != null) body['photoPrice'] = photoPrice;
+
+      final res = await http.put(
+        Uri.parse('$baseUrl/creators/rates'),
+        headers: _headers,
+        body: jsonEncode(body),
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('[ApiService] Update rates error: $e');
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchCreatorStudioStats(String userId) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/creators/studio-stats?userId=$userId'),
+        headers: _headers,
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return {'success': false, 'error': 'Status ${res.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiService] Fetch studio stats error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
 }

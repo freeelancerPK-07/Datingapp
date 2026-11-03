@@ -12,6 +12,7 @@ import 'package:version1/screens/liked_saved_screen.dart';
 import 'package:version1/screens/profile_self_screen.dart';
 import 'package:version1/screens/recharge_packages_sheet.dart';
 import 'package:version1/screens/video_calls_screen.dart';
+import 'package:version1/screens/creator_studio_screen.dart';
 import 'package:version1/screens/wallet_screen.dart';
 import 'package:version1/services/app_state.dart';
 import 'package:version1/widgets/coin_icon.dart';
@@ -35,14 +36,14 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _verifiedOnly = false;
   bool _onlineOnly = false;
 
-  static const List<String> _countries = [
-    'All Countries',
-    'India',
-    'Singapore',
-    'UAE',
-    'United Kingdom',
-    'United States',
-  ];
+
+
+
+
+
+
+
+
 
   static const List<String> _categories = [
     'Featured',
@@ -256,92 +257,92 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
 
-  void _showCountryPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Select Country',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF111111),
-                    ),
-                  ),
-                  if (_selectedCountry != 'All Countries')
-                    TextButton(
-                      onPressed: () {
-                        setState(() => _selectedCountry = 'All Countries');
-                        Navigator.pop(ctx);
-                      },
-                      child: Text(
-                        'Reset',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: LinkUpTheme.primaryTeal,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ..._countries.map((country) {
-                final isSelected = _selectedCountry == country;
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    Icons.public_rounded,
-                    color: isSelected ? LinkUpTheme.primaryTeal : const Color(0xFF6B7280),
-                    size: 20,
-                  ),
-                  title: Text(
-                    country,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 15,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? LinkUpTheme.darkSlate : const Color(0xFF4B5563),
-                    ),
-                  ),
-                  trailing: isSelected
-                      ? const Icon(Icons.check_circle_rounded, color: LinkUpTheme.primaryTeal, size: 20)
-                      : null,
-                  onTap: () {
-                    setState(() => _selectedCountry = country);
-                    Navigator.pop(ctx);
-                  },
-                );
-              }),
-            ],
-          ),
-        );
-      },
-    );
-  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   void _showAdvancedFiltersSheet() {
     List<String> tempLanguages = List.from(_selectedLanguages);
@@ -1111,43 +1112,56 @@ class _HomeScreenState extends State<HomeScreen> {
 
                       const Spacer(),
 
-                      // Country Selector Pill
-                      GestureDetector(
-                        onTap: _showCountryPicker,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.22),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.35),
+                      // Creator Studio Button (Only shown if creator; empty for normal users)
+                      if (appState.isCreator) ...[
+                        GestureDetector(
+                          key: const ValueKey('creator_studio_btn'),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const CreatorStudioScreen(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.auto_awesome_rounded,
+                                    size: 13, color: Colors.white),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Studio',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.public_rounded,
-                                  size: 13, color: Colors.white),
-                              const SizedBox(width: 4),
-                              Text(
-                                _selectedCountry == 'All Countries'
-                                    ? 'Global'
-                                    : _selectedCountry,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const Icon(Icons.keyboard_arrow_down_rounded,
-                                  size: 13, color: Colors.white),
-                            ],
-                          ),
                         ),
-                      ),
+                        const SizedBox(width: 6),
+                      ],
 
-                      const SizedBox(width: 6),
 
                       // Diamond Badge
                       GestureDetector(

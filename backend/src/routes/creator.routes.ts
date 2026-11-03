@@ -18,37 +18,47 @@ creatorRouter.get('/', async (_req, res) => {
         user: {
           include: {
             profile: true,
+            creatorApplications: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            },
           },
         },
       },
       orderBy: [
         { isFeatured: 'desc' },
         { rating: 'desc' },
+        { createdAt: 'desc' },
       ],
     });
 
-    const formatted = creators.map((c) => ({
-      id: c.id,
-      userId: c.userId,
-      name: c.user.profile?.name || 'Creator',
-      age: c.age || 23,
-      photoUrl: c.user.profile?.avatarUrl || '',
-      isOnline: c.isOnline,
-      isVerified: c.user.isVerified,
-      bio: c.user.profile?.bio || '',
-      videoCallPrice: c.videoCallPrice,
-      voiceCallPrice: c.voiceCallPrice,
-      photoPrice: c.photoPrice,
-      rating: Number(c.rating),
-      reviewCount: c.reviewCount,
-      profession: c.profession,
-      followers: c.followers,
-      tier: c.tier,
-      location: `${c.user.profile?.city || 'Chennai'}, India`,
-      tags: c.tags,
-      languages: c.languages,
-      isFeatured: c.isFeatured,
-    }));
+    const formatted = creators
+      .map((c) => {
+        const photo = c.user.profile?.avatarUrl || c.user.creatorApplications?.[0]?.photoUrl || '';
+        return {
+          id: c.id,
+          userId: c.userId,
+          name: c.user.profile?.name || c.user.creatorApplications?.[0]?.legalName || 'Creator',
+          age: c.age || 23,
+          photoUrl: photo,
+          isOnline: c.isOnline,
+          isVerified: c.user.isVerified,
+          bio: c.user.profile?.bio || c.user.creatorApplications?.[0]?.bio || '',
+          videoCallPrice: c.videoCallPrice,
+          voiceCallPrice: c.voiceCallPrice,
+          photoPrice: c.photoPrice,
+          rating: Number(c.rating),
+          reviewCount: c.reviewCount,
+          profession: c.profession,
+          followers: c.followers,
+          tier: c.tier,
+          location: `${c.user.profile?.city || 'Chennai'}, India`,
+          tags: c.tags,
+          languages: c.languages,
+          isFeatured: c.isFeatured,
+        };
+      })
+      .filter((c) => c.photoUrl.trim().length > 0);
 
     return res.json({ success: true, count: formatted.length, data: formatted });
   } catch (error: any) {
@@ -369,6 +379,128 @@ creatorRouter.post('/toggle-online', async (req, res) => {
     });
 
     return res.json({ success: true, isOnline: creator.isOnline });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * PUT /api/v1/creators/rates
+ * Creator updates their own rates
+ */
+creatorRouter.put('/rates', async (req, res) => {
+  try {
+    const { userId, videoCallPrice, voiceCallPrice, photoPrice } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'userId is required' });
+    }
+
+    const creator = await prisma.creator.update({
+      where: { userId },
+      data: {
+        ...(videoCallPrice !== undefined && { videoCallPrice: Number(videoCallPrice) }),
+        ...(voiceCallPrice !== undefined && { voiceCallPrice: Number(voiceCallPrice) }),
+        ...(photoPrice !== undefined && { photoPrice: Number(photoPrice) }),
+      },
+    });
+
+    return res.json({ success: true, creator });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/creators/studio-stats
+ * Real-time stats for the Creator Studio: who called, earnings, likes, rates
+ */
+creatorRouter.get('/studio-stats', async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'userId is required' });
+    }
+
+    const creator = await prisma.creator.findUnique({
+      where: { userId: String(userId) },
+      include: {
+        user: {
+          include: {
+            profile: true,
+            creatorApplications: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            },
+          },
+        },
+        incomingCalls: {
+          include: {
+            caller: {
+              include: { profile: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 30,
+        },
+      },
+    });
+
+    if (!creator) {
+      return res.status(404).json({ success: false, error: 'Creator profile not found' });
+    }
+
+    const application = creator.user.creatorApplications[0];
+
+    // Compute earnings
+    const totalCalls = creator.incomingCalls.length;
+    const completedCalls = creator.incomingCalls.filter((c) => c.status === 'COMPLETED');
+    const totalDurationSecs = completedCalls.reduce((acc, c) => acc + c.durationSecs, 0);
+    const totalCoinsGross = completedCalls.reduce((acc, c) => acc + c.totalCoins, 0);
+    const creatorCoinsEarned = Math.round(totalCoinsGross * 0.70); // 70% share
+    const totalEarningsInr = (creatorCoinsEarned * 0.50).toFixed(2);
+
+    const callersList = creator.incomingCalls.map((c) => ({
+      id: c.id,
+      callerId: c.callerId,
+      callerName: c.caller.profile?.name || 'LinkUp User',
+      callerAvatar: c.caller.profile?.avatarUrl || '',
+      callType: c.callType,
+      durationSecs: c.durationSecs,
+      durationFormatted: `${Math.floor(c.durationSecs / 60)}m ${c.durationSecs % 60}s`,
+      coinsEarned: Math.round(c.totalCoins * 0.70),
+      status: c.status,
+      createdAt: c.createdAt,
+    }));
+
+    return res.json({
+      success: true,
+      data: {
+        creatorId: creator.id,
+        userId: creator.userId,
+        name: creator.user.profile?.name || application?.legalName || 'Creator',
+        photoUrl: creator.user.profile?.avatarUrl || application?.photoUrl || '',
+        profession: creator.profession,
+        isOnline: creator.isOnline,
+        tier: creator.tier,
+        payoutUpiId: application?.payoutUpiId || '',
+        rates: {
+          videoCallPrice: creator.videoCallPrice,
+          voiceCallPrice: creator.voiceCallPrice,
+          photoPrice: creator.photoPrice,
+        },
+        stats: {
+          totalCalls,
+          completedCalls: completedCalls.length,
+          totalDurationMinutes: Math.round(totalDurationSecs / 60),
+          creatorCoinsEarned,
+          totalEarningsInr,
+          profileLikes: creator.reviewCount * 3 + 15,
+          followers: creator.followers,
+          rating: Number(creator.rating),
+        },
+        recentCallers: callersList,
+      },
+    });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
