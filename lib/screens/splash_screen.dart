@@ -84,10 +84,22 @@ class _SplashScreenState extends State<SplashScreen>
 
         bool isCompleted = isCompletedStr == 'true';
         try {
-          final meRes = await ApiService.instance.getMe(userId: userId).timeout(const Duration(seconds: 2));
-          if (meRes['success'] == true && meRes['isProfileCompleted'] != null) {
-            isCompleted = meRes['isProfileCompleted'] == true;
-            await storage.write(key: 'is_profile_completed', value: isCompleted ? 'true' : 'false');
+          final meRes = await ApiService.instance.getMe(userId: userId).timeout(const Duration(seconds: 3));
+          if (meRes['success'] == true) {
+            if (meRes['isProfileCompleted'] != null) {
+              isCompleted = meRes['isProfileCompleted'] == true;
+              await storage.write(key: 'is_profile_completed', value: isCompleted ? 'true' : 'false');
+            }
+            final userMap = meRes['user'] as Map<String, dynamic>?;
+            if (userMap != null) {
+              final profile = userMap['profile'] as Map<String, dynamic>?;
+              if (profile != null) {
+                AppState.instance.restoreUserProfileFromDb(profile);
+              }
+              if (userMap['isCreator'] == true) {
+                AppState.instance.setCreatorStatus(true);
+              }
+            }
           }
         } catch (_) {}
 

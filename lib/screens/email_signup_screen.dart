@@ -70,7 +70,7 @@ class _EmailSignUpScreenState extends State<EmailSignUpScreen> {
 
         final token = res['token'].toString();
         final userId = res['user']?['id']?.toString() ?? '';
-        final profile = res['user']?['profile'];
+        final profile = res['user']?['profile'] as Map<String, dynamic>?;
         final bool isProfileCompleted = res['isProfileCompleted'] == true ||
             (profile != null && profile['isCompleted'] == true);
 
@@ -80,6 +80,7 @@ class _EmailSignUpScreenState extends State<EmailSignUpScreen> {
           isProfileCompleted: isProfileCompleted,
           email: email,
           name: name,
+          profile: profile,
         );
 
         if (!mounted) return;

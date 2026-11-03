@@ -1,33 +1,96 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ShieldAlert,
-  Video,
-  CreditCard,
-  UserCheck,
+  LayoutDashboard,
   Users,
-  UserPlus,
+  Sparkles,
+  Coins,
+  CreditCard,
+  Video,
+  Settings,
+  ShieldAlert,
+  Search,
+  RefreshCw,
+  Bell,
   CheckCircle2,
   XCircle,
-  RefreshCw,
+  Eye,
+  Plus,
+  Trash2,
+  Check,
+  X,
   ExternalLink,
   Lock,
   Unlock,
-  AlertCircle,
-  Sparkles,
+  AlertTriangle,
+  TrendingUp,
+  UserCheck,
+  UserX,
+  Radio,
+  Clock,
+  ArrowUpRight,
+  Filter,
+  DollarSign,
+  ChevronRight,
+  Calendar,
   Phone,
   Mail,
-  Instagram,
-  Eye,
-  Sliders,
-  DollarSign
+  Award,
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api/v1';
+const API_BASE = '/api/v1';
 
-interface AdminSettings {
-  isFreezeBalance: boolean;
-  isVideoConnectionEnabled: boolean;
-  paymentUpiId: string;
+// Types
+interface OverviewStats {
+  totalUsers: number;
+  activeToday: number;
+  totalCreators: number;
+  activeCreators: number;
+  inactiveCreators: number;
+  liveCreators: number;
+  totalDiamondsSold: number;
+  totalRevenue: number;
+  totalCalls: number;
+  completedCalls: number;
+  pendingApprovals: number;
+}
+
+interface RecentTxn {
+  id: string;
+  userName: string;
+  userEmail: string;
+  coins: number;
+  amountInr: number;
+  type: string;
+  status: string;
+  createdAt: string;
+  description: string;
+}
+
+interface RecentCall {
+  id: string;
+  callerName: string;
+  creatorName: string;
+  callType: string;
+  durationSecs: number;
+  durationFormatted: string;
+  coins: number;
+  status: string;
+  createdAt: string;
+}
+
+interface UserRecord {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatarUrl: string;
+  role: string;
+  isActive: boolean;
+  isVerified: boolean;
+  walletBalance: number;
+  createdAt: string;
+  city: string;
+  isCreator: boolean;
 }
 
 interface CreatorApplication {
@@ -39,10 +102,10 @@ interface CreatorApplication {
   bio: string;
   photoUrl: string;
   govtIdType: string;
-  govtIdFrontUrl?: string;
-  govtIdBackUrl?: string;
-  selfieUrl?: string;
-  socialHandle?: string;
+  govtIdFrontUrl: string | null;
+  govtIdBackUrl: string | null;
+  selfieUrl: string | null;
+  socialHandle: string | null;
   payoutUpiId: string;
   videoCallPrice: number;
   voiceCallPrice: number;
@@ -50,15 +113,14 @@ interface CreatorApplication {
   tags: string[];
   subscriptionPlan: string;
   subscriptionPaid: boolean;
-  status: string;
   createdAt: string;
-  user?: {
-    email?: string;
-    phone?: string;
-    profile?: {
-      name?: string;
-      avatarUrl?: string;
-    };
+  user: {
+    email: string | null;
+    phone: string | null;
+    profile: {
+      avatarUrl: string;
+      name: string;
+    } | null;
   };
 }
 
@@ -67,23 +129,61 @@ interface Creator {
   userId: string;
   name: string;
   age: number;
-  photoUrl: string;
   profession: string;
+  photoUrl: string;
   videoCallPrice: number;
   voiceCallPrice: number;
+  rating: number;
+  reviewCount: number;
   isActive: boolean;
   isApproved: boolean;
   isFeatured: boolean;
   isOnline: boolean;
-  rating: number;
-  reviewCount: number;
   languages: string[];
   tags: string[];
   email: string;
   phone: string;
 }
 
+interface AdminSettings {
+  isFreezeBalance: boolean;
+  isVideoConnectionEnabled: boolean;
+  paymentUpiId: string;
+}
+
 export default function App() {
+  // Navigation State
+  const [activeMenu, setActiveMenu] = useState<
+    'dashboard' | 'users' | 'creators' | 'wallet' | 'transactions' | 'calls' | 'settings'
+  >('dashboard');
+
+  // Loading & Connection State
+  const [apiConnected, setApiConnected] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Data States
+  const [stats, setStats] = useState<OverviewStats>({
+    totalUsers: 0,
+    activeToday: 0,
+    totalCreators: 0,
+    activeCreators: 0,
+    inactiveCreators: 0,
+    liveCreators: 0,
+    totalDiamondsSold: 0,
+    totalRevenue: 0,
+    totalCalls: 0,
+    completedCalls: 0,
+    pendingApprovals: 0,
+  });
+  const [recentTxns, setRecentTxns] = useState<RecentTxn[]>([]);
+  const [recentCalls, setRecentCalls] = useState<RecentCall[]>([]);
+  const [usersList, setUsersList] = useState<UserRecord[]>([]);
+  const [pendingApps, setPendingApps] = useState<CreatorApplication[]>([]);
+  const [creatorsList, setCreatorsList] = useState<Creator[]>([]);
+  const [allTxns, setAllTxns] = useState<any[]>([]);
+  const [allCalls, setAllCalls] = useState<any[]>([]);
+
   // Settings State
   const [settings, setSettings] = useState<AdminSettings>({
     isFreezeBalance: false,
@@ -91,27 +191,23 @@ export default function App() {
     paymentUpiId: 'XYX12438383@ybl',
   });
   const [upiInput, setUpiInput] = useState('XYX12438383@ybl');
-  const [settingsLoading, setSettingsLoading] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Creator State
-  const [activeTab, setActiveTab] = useState<'pending' | 'directory' | 'add'>('pending');
-  const [pendingApps, setPendingApps] = useState<CreatorApplication[]>([]);
-  const [creators, setCreators] = useState<Creator[]>([]);
-  const [loadingCreators, setLoadingCreators] = useState(false);
-  const [apiConnected, setApiConnected] = useState(false);
-
-  // Modals & Forms
+  // Creator Sub-Tabs & Modals
+  const [creatorSubTab, setCreatorSubTab] = useState<'pending' | 'directory' | 'add'>('pending');
   const [selectedKycApp, setSelectedKycApp] = useState<CreatorApplication | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectingAppId, setRejectingAppId] = useState<string | null>(null);
 
-  // New Creator Direct Form
+  // Users Filter & Search
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('ALL');
+
+  // Direct Onboard Form
   const [newCreatorForm, setNewCreatorForm] = useState({
     name: '',
     age: 23,
     profession: 'Lifestyle & Dating Consultant',
-    photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+    photoUrl: '',
     videoCallPrice: 500,
     voiceCallPrice: 300,
     bio: 'Verified consultation expert on LinkUp.',
@@ -126,51 +222,86 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Fetch all initial data
-  const loadData = async () => {
-    setLoadingCreators(true);
+  // ---------------------------------------------------------------------------
+  // Data Fetching
+  // ---------------------------------------------------------------------------
+  const loadDashboardData = async () => {
+    setLoading(true);
     try {
-      // 1. Settings
-      const setRes = await fetch(`${API_BASE}/admin/settings`);
-      if (setRes.ok) {
-        const sData = await setRes.json();
-        if (sData.settings) {
-          setSettings(sData.settings);
-          setUpiInput(sData.settings.paymentUpiId || 'XYX12438383@ybl');
+      // 1. Overview Stats & Recent Activity
+      const ovRes = await fetch(`${API_BASE}/admin/overview`);
+      if (ovRes.ok) {
+        const d = await ovRes.json();
+        if (d.data) {
+          setStats(d.data.stats || stats);
+          setRecentTxns(d.data.recentTransactions || []);
+          setRecentCalls(d.data.recentCalls || []);
           setApiConnected(true);
         }
       }
 
-      // 2. Pending Applications
-      const pendRes = await fetch(`${API_BASE}/admin/creators/pending`);
-      if (pendRes.ok) {
-        const pData = await pendRes.json();
-        setPendingApps(pData.data || []);
+      // 2. Settings
+      const setRes = await fetch(`${API_BASE}/admin/settings`);
+      if (setRes.ok) {
+        const s = await setRes.json();
+        if (s.settings) {
+          setSettings(s.settings);
+          setUpiInput(s.settings.paymentUpiId || 'XYX12438383@ybl');
+        }
       }
 
-      // 3. All Creators
+      // 3. Pending Creator Applications
+      const pendRes = await fetch(`${API_BASE}/admin/creators/pending`);
+      if (pendRes.ok) {
+        const p = await pendRes.json();
+        setPendingApps(p.data || []);
+      }
+
+      // 4. All Creators
       const crRes = await fetch(`${API_BASE}/admin/creators`);
       if (crRes.ok) {
-        const cData = await crRes.json();
-        setCreators(cData.data || []);
+        const c = await crRes.json();
+        setCreatorsList(c.data || []);
+      }
+
+      // 5. Users List
+      const uRes = await fetch(`${API_BASE}/admin/users`);
+      if (uRes.ok) {
+        const u = await uRes.json();
+        setUsersList(u.data || []);
+      }
+
+      // 6. Transactions
+      const txRes = await fetch(`${API_BASE}/admin/transactions`);
+      if (txRes.ok) {
+        const t = await txRes.json();
+        setAllTxns(t.data || []);
+      }
+
+      // 7. Calls
+      const clRes = await fetch(`${API_BASE}/admin/calls`);
+      if (clRes.ok) {
+        const cl = await clRes.json();
+        setAllCalls(cl.data || []);
       }
     } catch (e) {
-      console.error('Failed to connect to backend API:', e);
+      console.error('Error fetching admin data:', e);
       setApiConnected(false);
     } finally {
-      setLoadingCreators(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 8000); // Polling for real-time updates
+    loadDashboardData();
+    const interval = setInterval(loadDashboardData, 8000); // 8s live poll
     return () => clearInterval(interval);
   }, []);
 
-  // Update Settings
+  // ---------------------------------------------------------------------------
+  // Action Handlers
+  // ---------------------------------------------------------------------------
   const handleUpdateSettings = async (updates: Partial<AdminSettings>) => {
-    setSettingsLoading(true);
     try {
       const res = await fetch(`${API_BASE}/admin/settings`, {
         method: 'PUT',
@@ -180,62 +311,64 @@ export default function App() {
       const data = await res.json();
       if (data.success) {
         setSettings(data.settings);
-        showToast('App Settings updated successfully!');
+        showToast('System settings updated successfully');
       }
     } catch (e) {
-      showToast('Error updating settings');
-    } finally {
-      setSettingsLoading(false);
+      showToast('Failed to update system settings');
     }
   };
 
-  // Save UPI ID
-  const handleSaveUpi = () => {
-    if (!upiInput.trim()) return;
-    handleUpdateSettings({ paymentUpiId: upiInput.trim() });
-  };
-
-  // Approve Creator
-  const handleApprove = async (applicationId: string) => {
+  const handleApproveCreator = async (appId: string) => {
     try {
-      const res = await fetch(`${API_BASE}/admin/creators/${applicationId}/approve`, {
+      const res = await fetch(`${API_BASE}/admin/creators/${appId}/approve`, {
         method: 'POST',
       });
       const data = await res.json();
       if (data.success) {
-        showToast('Creator Approved! Profile is now LIVE on mobile app feed.');
-        loadData();
+        showToast('Creator Approved! Profile is now LIVE on mobile app Home Feed.');
         setSelectedKycApp(null);
+        loadDashboardData();
       } else {
-        showToast(data.error || 'Failed to approve');
+        showToast(data.error || 'Failed to approve creator');
       }
     } catch (e) {
-      showToast('Approval request failed');
+      showToast('Error approving creator application');
     }
   };
 
-  // Reject Creator
-  const handleReject = async () => {
+  const handleRejectCreator = async () => {
     if (!rejectingAppId) return;
     try {
       const res = await fetch(`${API_BASE}/admin/creators/${rejectingAppId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: rejectionReason }),
+        body: JSON.stringify({ reason: rejectionReason || 'KYC documentation could not be verified.' }),
       });
       const data = await res.json();
       if (data.success) {
         showToast('Application rejected with feedback');
         setRejectingAppId(null);
         setRejectionReason('');
-        loadData();
+        loadDashboardData();
       }
     } catch (e) {
-      showToast('Rejection request failed');
+      showToast('Error rejecting application');
     }
   };
 
-  // Toggle Creator Active State
+  const handleToggleUserBlock = async (userId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${userId}/toggle-status`, { method: 'PUT' });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || 'User status updated');
+        loadDashboardData();
+      }
+    } catch (e) {
+      showToast('Failed to update user status');
+    }
+  };
+
   const handleToggleCreatorActive = async (creatorId: string, current: boolean) => {
     try {
       const res = await fetch(`${API_BASE}/admin/creators/${creatorId}`, {
@@ -245,15 +378,14 @@ export default function App() {
       });
       if (res.ok) {
         showToast(`Creator ${!current ? 'Activated' : 'Deactivated'}`);
-        loadData();
+        loadDashboardData();
       }
     } catch (e) {
-      showToast('Failed to update creator state');
+      showToast('Failed to toggle creator status');
     }
   };
 
-  // Toggle Featured State (Homepage banner)
-  const handleToggleCreatorFeatured = async (creatorId: string, current: boolean) => {
+  const handleToggleFeatured = async (creatorId: string, current: boolean) => {
     try {
       const res = await fetch(`${API_BASE}/admin/creators/${creatorId}`, {
         method: 'PUT',
@@ -261,17 +393,20 @@ export default function App() {
         body: JSON.stringify({ isFeatured: !current }),
       });
       if (res.ok) {
-        showToast(`Creator ${!current ? 'Pinned to Featured' : 'Unpinned'}`);
-        loadData();
+        showToast(`Creator ${!current ? 'Pinned to Featured' : 'Removed from Featured'}`);
+        loadDashboardData();
       }
     } catch (e) {
-      showToast('Failed to update featured state');
+      showToast('Failed to update featured status');
     }
   };
 
-  // Add Direct Creator
-  const handleCreateDirectCreator = async (e: React.FormEvent) => {
+  const handleDirectCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newCreatorForm.name || !newCreatorForm.profession) {
+      showToast('Name and profession are required');
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE}/admin/creators/create-direct`, {
         method: 'POST',
@@ -280,426 +415,706 @@ export default function App() {
       });
       const data = await res.json();
       if (data.success) {
-        showToast('New creator published directly to app!');
-        setNewCreatorForm({
-          name: '',
-          age: 23,
-          profession: 'Lifestyle & Dating Consultant',
-          photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
-          videoCallPrice: 500,
-          voiceCallPrice: 300,
-          bio: 'Verified consultation expert on LinkUp.',
-          email: '',
-          phone: '',
-          isActive: true,
-          isFeatured: true,
-        });
-        setActiveTab('directory');
-        loadData();
+        showToast('Creator created & published LIVE to Mobile App!');
+        setCreatorSubTab('directory');
+        loadDashboardData();
       } else {
-        showToast(data.error || 'Failed to create creator');
+        showToast(data.error || 'Failed to onboard creator');
       }
     } catch (e) {
-      showToast('Failed to publish creator');
+      showToast('Error onboarding creator');
     }
   };
 
+  // Filtered Users
+  const filteredUsers = usersList.filter((u) => {
+    const q = userSearchQuery.toLowerCase();
+    const matchesQ =
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      u.phone.toLowerCase().includes(q);
+    if (!matchesQ) return false;
+    if (userRoleFilter === 'CREATORS_ONLY' && !u.isCreator) return false;
+    if (userRoleFilter === 'ACTIVE_ONLY' && !u.isActive) return false;
+    if (userRoleFilter === 'BLOCKED_ONLY' && u.isActive) return false;
+    return true;
+  });
+
   return (
-    <div className="min-h-screen bg-[#FAFAFA] text-[#111111] font-sans antialiased">
+    <div className="flex h-screen bg-[#F8FAFC] text-slate-800 font-sans antialiased overflow-hidden">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#111111] text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-semibold flex items-center space-x-2 border border-[#27272A] animate-bounce">
-          <Sparkles className="w-4 h-4 text-emerald-400" />
-          <span>{toastMessage}</span>
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl border border-slate-700 animate-slide-in">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          <span className="text-sm font-semibold">{toastMessage}</span>
         </div>
       )}
 
-      {/* Top Header */}
-      <header className="border-b border-[#E4E4E7] bg-white sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-[#111111] text-white flex items-center justify-center font-black text-lg shadow-sm">
+      {/* =========================================================================
+          LEFT SIDEBAR (Dark Slate Theme #111827)
+          ========================================================================= */}
+      <aside className="w-64 bg-[#111827] text-slate-300 flex flex-col border-r border-slate-800 shrink-0">
+        {/* Brand Header */}
+        <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/20">
               L
             </div>
             <div>
-              <h1 className="text-base font-extrabold tracking-tight">LinkUp Admin Console</h1>
-              <p className="text-xs text-[#71717A] font-medium">Real-Time Creator Verification & System Controller</p>
+              <h1 className="font-extrabold text-white text-base tracking-tight leading-none">LinkUp</h1>
+              <p className="text-[11px] text-slate-400 font-medium mt-1">Admin Console</p>
             </div>
           </div>
+          <div
+            className={`w-2.5 h-2.5 rounded-full ${apiConnected ? 'bg-emerald-400 shadow-[0_0_8px_#34D399]' : 'bg-rose-500'}`}
+            title={apiConnected ? 'Backend Connected' : 'Disconnected'}
+          />
+        </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-[#F4F4F5] border border-[#E4E4E7] text-xs font-semibold">
-              <span className={`w-2 h-2 rounded-full ${apiConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-              <span className="text-[#52525B]">Backend: {apiConnected ? 'Connected (Port 5000)' : 'Offline / Reconnecting'}</span>
-            </div>
+        {/* Navigation Menu */}
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+          <div>
+            <p className="px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Main Menu</p>
+            <nav className="space-y-1">
+              <SidebarItem
+                icon={<LayoutDashboard className="w-4 h-4" />}
+                label="Dashboard Overview"
+                active={activeMenu === 'dashboard'}
+                onClick={() => setActiveMenu('dashboard')}
+              />
+              <SidebarItem
+                icon={<Users className="w-4 h-4" />}
+                label="User Management"
+                badge={stats.totalUsers ? stats.totalUsers.toString() : undefined}
+                active={activeMenu === 'users'}
+                onClick={() => setActiveMenu('users')}
+              />
+              <SidebarItem
+                icon={<Sparkles className="w-4 h-4" />}
+                label="Creator Management"
+                badge={pendingApps.length > 0 ? `${pendingApps.length} New` : undefined}
+                badgeColor="bg-amber-500/20 text-amber-300"
+                active={activeMenu === 'creators'}
+                onClick={() => setActiveMenu('creators')}
+              />
+              <SidebarItem
+                icon={<Coins className="w-4 h-4" />}
+                label="Wallet & Diamonds"
+                active={activeMenu === 'wallet'}
+                onClick={() => setActiveMenu('wallet')}
+              />
+              <SidebarItem
+                icon={<CreditCard className="w-4 h-4" />}
+                label="Payments & Transactions"
+                active={activeMenu === 'transactions'}
+                onClick={() => setActiveMenu('transactions')}
+              />
+              <SidebarItem
+                icon={<Video className="w-4 h-4" />}
+                label="Live Calls & Sessions"
+                active={activeMenu === 'calls'}
+                onClick={() => setActiveMenu('calls')}
+              />
+            </nav>
+          </div>
 
-            <button
-              onClick={loadData}
-              disabled={loadingCreators}
-              className="p-2 rounded-lg hover:bg-[#F4F4F5] border border-[#E4E4E7] transition text-[#71717A] hover:text-[#111111]"
-              title="Refresh Data"
-            >
-              <RefreshCw className={`w-4 h-4 ${loadingCreators ? 'animate-spin' : ''}`} />
-            </button>
+          <div>
+            <p className="px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Configuration</p>
+            <nav className="space-y-1">
+              <SidebarItem
+                icon={<Settings className="w-4 h-4" />}
+                label="App Settings"
+                active={activeMenu === 'settings'}
+                onClick={() => setActiveMenu('settings')}
+              />
+            </nav>
           </div>
         </div>
-      </header>
 
-      {/* Main Two-Column Container */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* ========================================================================= */}
-          {/* COLUMN 1: WALLET & APP SETTINGS (4 Cols) */}
-          {/* ========================================================================= */}
-          <section className="lg:col-span-5 space-y-6">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-[#71717A] flex items-center space-x-2">
-                <Sliders className="w-4 h-4 text-[#111111]" />
-                <span>Column 1: Wallet & App Settings</span>
-              </h2>
+        {/* Footer Admin Profile */}
+        <div className="p-4 border-t border-slate-800 bg-[#0B0F19] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center font-bold text-indigo-300 text-sm">
+              AD
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-xs font-bold text-white truncate">Super Admin</p>
+              <p className="text-[10px] text-slate-400 truncate">admin@linkup.com</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* =========================================================================
+          MAIN CONTENT AREA
+          ========================================================================= */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Header Bar */}
+        <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between shrink-0">
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-900 leading-none">
+              {activeMenu === 'dashboard' && 'Dashboard Overview'}
+              {activeMenu === 'users' && 'User Management'}
+              {activeMenu === 'creators' && 'Creator Management & Verification'}
+              {activeMenu === 'wallet' && 'Wallet & Diamond Packages'}
+              {activeMenu === 'transactions' && 'Payments & Transactions'}
+              {activeMenu === 'calls' && 'Live Calls & History'}
+              {activeMenu === 'settings' && 'Platform & App Settings'}
+            </h2>
+            <p className="text-xs text-slate-500 font-medium mt-1">Real-time production platform administration</p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Live Connection Tag */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold">
+              <span className={`w-2 h-2 rounded-full ${apiConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+              <span className="text-slate-600">{apiConnected ? 'API Connected (Port 5000)' : 'Backend Offline'}</span>
             </div>
 
-            {/* A. Freeze Balance */}
-            <div className="bg-white rounded-2xl border border-[#E4E4E7] p-6 shadow-sm">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <ShieldAlert className="w-5 h-5 text-[#111111]" />
-                    <h3 className="font-bold text-base text-[#111111]">A. Freeze Balance</h3>
+            {/* Refresh Button */}
+            <button
+              onClick={loadDashboardData}
+              disabled={loading}
+              className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+              title="Refresh Data"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-indigo-600' : ''}`} />
+            </button>
+
+            {/* Notifications Bell */}
+            <div className="relative p-2 rounded-xl border border-slate-200 text-slate-600">
+              <Bell className="w-4 h-4" />
+              {pendingApps.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[10px] font-black flex items-center justify-center">
+                  {pendingApps.length}
+                </span>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Scrollable View Container */}
+        <main className="flex-1 overflow-y-auto p-8">
+          {/* VIEW 1: DASHBOARD OVERVIEW */}
+          {activeMenu === 'dashboard' && (
+            <div className="space-y-8 max-w-7xl mx-auto">
+              {/* Top 4 Primary Metric Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <MetricCard
+                  title="Total Registered Users"
+                  value={stats.totalUsers.toLocaleString()}
+                  subtext="Real DB user accounts"
+                  change="+100%"
+                  icon={<Users className="w-5 h-5 text-indigo-600" />}
+                  iconBg="bg-indigo-50"
+                />
+                <MetricCard
+                  title="Approved Creators"
+                  value={stats.totalCreators.toLocaleString()}
+                  subtext={`${stats.liveCreators} currently live`}
+                  change={stats.liveCreators > 0 ? 'Live Now' : 'Idle'}
+                  icon={<Sparkles className="w-5 h-5 text-amber-600" />}
+                  iconBg="bg-amber-50"
+                />
+                <MetricCard
+                  title="Diamonds Sold"
+                  value={stats.totalDiamondsSold.toLocaleString()}
+                  subtext="Purchased by users"
+                  change="Wallet"
+                  icon={<Coins className="w-5 h-5 text-emerald-600" />}
+                  iconBg="bg-emerald-50"
+                />
+                <MetricCard
+                  title="Total Revenue (INR)"
+                  value={`₹${stats.totalRevenue.toLocaleString()}`}
+                  subtext="Successful payments"
+                  change="Razorpay"
+                  icon={<DollarSign className="w-5 h-5 text-blue-600" />}
+                  iconBg="bg-blue-50"
+                />
+              </div>
+
+              {/* Secondary Metrics Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Video Calls</p>
+                    <p className="text-2xl font-black text-slate-900 mt-1">{stats.totalCalls}</p>
+                    <p className="text-[11px] text-slate-400 font-medium mt-0.5">{stats.completedCalls} completed sessions</p>
                   </div>
-                  <p className="text-xs text-[#71717A] leading-relaxed pr-4">
-                    When enabled, restricts wallet balance usage. Users cannot burn coins or book new calls.
-                  </p>
+                  <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">
+                    <Video className="w-6 h-6" />
+                  </div>
                 </div>
 
-                <button
-                  disabled={settingsLoading}
-                  onClick={() => handleUpdateSettings({ isFreezeBalance: !settings.isFreezeBalance })}
-                  className={`relative inline-flex h-7 w-13 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    settings.isFreezeBalance ? 'bg-[#111111]' : 'bg-[#E4E4E7]'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      settings.isFreezeBalance ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-[#F4F4F5] flex items-center justify-between text-xs">
-                <span className="text-[#71717A] font-medium">Defined Status:</span>
-                <span className={`font-bold px-2.5 py-1 rounded-full ${
-                  settings.isFreezeBalance ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
-                }`}>
-                  {settings.isFreezeBalance ? 'FROZEN (Usage Restricted)' : 'NORMAL (Usage Allowed)'}
-                </span>
-              </div>
-            </div>
-
-            {/* B. Video Connection Control */}
-            <div className="bg-white rounded-2xl border border-[#E4E4E7] p-6 shadow-sm">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <Video className="w-5 h-5 text-[#111111]" />
-                    <h3 className="font-bold text-base text-[#111111]">B. Video Connection Control</h3>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending KYC Queue</p>
+                    <p className="text-2xl font-black text-amber-600 mt-1">{pendingApps.length}</p>
+                    <p className="text-[11px] text-slate-400 font-medium mt-0.5">Awaiting admin review</p>
                   </div>
-                  <p className="text-xs text-[#71717A] leading-relaxed pr-4">
-                    Global video calling switch. When disabled, blocks new video connections across all users.
-                  </p>
+                  <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                    <Clock className="w-6 h-6" />
+                  </div>
                 </div>
 
-                <button
-                  disabled={settingsLoading}
-                  onClick={() => handleUpdateSettings({ isVideoConnectionEnabled: !settings.isVideoConnectionEnabled })}
-                  className={`relative inline-flex h-7 w-13 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    settings.isVideoConnectionEnabled ? 'bg-[#111111]' : 'bg-[#E4E4E7]'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      settings.isVideoConnectionEnabled ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Wallet Freeze Status</p>
+                    <p className={`text-2xl font-black mt-1 ${settings.isFreezeBalance ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      {settings.isFreezeBalance ? 'Frozen' : 'Normal'}
+                    </p>
+                    <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                      {settings.isFreezeBalance ? 'Diamond usage blocked' : 'Usage allowed'}
+                    </p>
+                  </div>
+                  <div className={`p-3 rounded-xl ${settings.isFreezeBalance ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                    {settings.isFreezeBalance ? <Lock className="w-6 h-6" /> : <Unlock className="w-6 h-6" />}
+                  </div>
+                </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-[#F4F4F5] flex items-center justify-between text-xs">
-                <span className="text-[#71717A] font-medium">Connection State:</span>
-                <span className={`font-bold px-2.5 py-1 rounded-full ${
-                  settings.isVideoConnectionEnabled ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                }`}>
-                  {settings.isVideoConnectionEnabled ? 'ENABLED (Calls Active)' : 'DISABLED (Kill-Switch Active)'}
-                </span>
+              {/* Two Column Grid: Pending Queue on Left & Recent Activity on Right */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Pending Verification Requests Widget */}
+                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                      <h3 className="text-base font-extrabold text-slate-900">Creator Verification Requests</h3>
+                    </div>
+                    <span className="text-xs font-bold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">
+                      {pendingApps.length} Pending
+                    </span>
+                  </div>
+
+                  {pendingApps.length === 0 ? (
+                    <div className="py-12 text-center text-slate-400">
+                      <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-400 mb-2" />
+                      <p className="text-sm font-bold text-slate-700">Verification Queue is Clean</p>
+                      <p className="text-xs text-slate-400 mt-1">When users apply from mobile app, they appear here.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {pendingApps.map((app) => (
+                        <div
+                          key={app.id}
+                          className="p-4 rounded-xl border border-slate-200 hover:border-indigo-300 transition-all bg-slate-50/50 flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-200 shrink-0">
+                              {app.photoUrl ? (
+                                <img src={app.photoUrl} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full bg-indigo-600 text-white font-bold flex items-center justify-center text-base">
+                                  {app.legalName?.[0] || 'C'}
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-extrabold text-sm text-slate-900">{app.legalName}</p>
+                                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
+                                  ₹299 Paid
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 font-medium">
+                                {app.profession} • {app.age} yrs • {app.govtIdType}
+                              </p>
+                              <p className="text-[11px] text-indigo-600 font-semibold mt-0.5">UPI: {app.payoutUpiId || 'Not provided'}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setSelectedKycApp(app)}
+                              className="p-2 text-slate-600 hover:bg-slate-200 rounded-lg text-xs font-bold"
+                              title="Inspect KYC"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleApproveCreator(app.id)}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-emerald-600/20"
+                            >
+                              <Check className="w-3.5 h-3.5" /> Approve
+                            </button>
+                            <button
+                              onClick={() => setRejectingAppId(app.id)}
+                              className="px-2.5 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-bold"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Recent Transactions Widget */}
+                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-base font-extrabold text-slate-900">Recent Transactions</h3>
+                    <button
+                      onClick={() => setActiveMenu('transactions')}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                    >
+                      View All <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {recentTxns.length === 0 ? (
+                    <div className="py-12 text-center text-slate-400">
+                      <CreditCard className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                      <p className="text-sm font-bold text-slate-700">No Transactions Yet</p>
+                      <p className="text-xs text-slate-400 mt-1">Live payments made on mobile will show up here.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {recentTxns.map((t) => (
+                        <div key={t.id} className="py-3 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                              ₹
+                            </div>
+                            <div>
+                              <p className="text-xs font-extrabold text-slate-900">{t.userName}</p>
+                              <p className="text-[11px] text-slate-400">{t.description}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-black text-slate-900">+₹{t.amountInr}</p>
+                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+                              {t.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+          )}
 
-            {/* C. Payment Account Configuration */}
-            <div className="bg-white rounded-2xl border border-[#E4E4E7] p-6 shadow-sm">
-              <div className="flex items-center space-x-2 mb-2">
-                <CreditCard className="w-5 h-5 text-[#111111]" />
-                <h3 className="font-bold text-base text-[#111111]">C. Payment Account Configuration</h3>
-              </div>
-              <p className="text-xs text-[#71717A] leading-relaxed mb-4">
-                Configure primary administrator UPI ID for creator subscription & diamond wallet recharges.
-              </p>
-
-              <div className="space-y-3">
-                <label className="block text-xs font-semibold text-[#52525B]">
-                  Admin Primary UPI ID
-                </label>
-                <div className="relative">
+          {/* VIEW 2: USERS MANAGEMENT */}
+          {activeMenu === 'users' && (
+            <div className="space-y-6 max-w-7xl mx-auto">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                {/* Search Bar */}
+                <div className="relative w-full sm:w-96">
+                  <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                   <input
                     type="text"
-                    value={upiInput}
-                    onChange={(e) => setUpiInput(e.target.value)}
-                    placeholder="e.g. XYX12438383@ybl"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#E4E4E7] bg-[#FAFAFA] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#111111] transition"
+                    placeholder="Search by name, phone or email..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-white rounded-xl border border-slate-200 text-sm font-medium focus:outline-none focus:border-indigo-600"
                   />
                 </div>
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-[11px] text-[#A1A1AA]">
-                    * Verified before production payouts
-                  </span>
+
+                {/* Filter Chips */}
+                <div className="flex items-center gap-2">
                   <button
-                    disabled={settingsLoading || upiInput === settings.paymentUpiId}
-                    onClick={handleSaveUpi}
-                    className="px-4 py-2 rounded-xl bg-[#111111] text-white text-xs font-bold hover:bg-[#27272A] disabled:opacity-40 transition shadow-sm"
+                    onClick={() => setUserRoleFilter('ALL')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                      userRoleFilter === 'ALL' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-600'
+                    }`}
                   >
-                    Save UPI
+                    All ({usersList.length})
+                  </button>
+                  <button
+                    onClick={() => setUserRoleFilter('CREATORS_ONLY')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                      userRoleFilter === 'CREATORS_ONLY' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    Creators Only
+                  </button>
+                  <button
+                    onClick={() => setUserRoleFilter('ACTIVE_ONLY')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                      userRoleFilter === 'ACTIVE_ONLY' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    Active Accounts
                   </button>
                 </div>
               </div>
-            </div>
-          </section>
 
-          {/* ========================================================================= */}
-          {/* COLUMN 2: CREATOR MANAGEMENT (7 Cols) */}
-          {/* ========================================================================= */}
-          <section className="lg:col-span-7 space-y-6">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-[#71717A] flex items-center space-x-2">
-                <Users className="w-4 h-4 text-[#111111]" />
-                <span>Column 2: Creator Management</span>
-              </h2>
-
-              {/* Tabs */}
-              <div className="inline-flex p-1 bg-[#E4E4E7] rounded-xl text-xs font-bold">
-                <button
-                  onClick={() => setActiveTab('pending')}
-                  className={`px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 ${
-                    activeTab === 'pending'
-                      ? 'bg-white text-[#111111] shadow-sm'
-                      : 'text-[#71717A] hover:text-[#111111]'
-                  }`}
-                >
-                  <UserCheck className="w-3.5 h-3.5" />
-                  <span>Pending Queue</span>
-                  {pendingApps.length > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-[#111111] text-white text-[10px]">
-                      {pendingApps.length}
-                    </span>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('directory')}
-                  className={`px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 ${
-                    activeTab === 'directory'
-                      ? 'bg-white text-[#111111] shadow-sm'
-                      : 'text-[#71717A] hover:text-[#111111]'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  <span>All Creators ({creators.length})</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('add')}
-                  className={`px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 ${
-                    activeTab === 'add'
-                      ? 'bg-white text-[#111111] shadow-sm'
-                      : 'text-[#71717A] hover:text-[#111111]'
-                  }`}
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span>+ Add Creator</span>
-                </button>
+              {/* Users Table */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3.5 px-6">User</th>
+                      <th className="py-3.5 px-6">Contact</th>
+                      <th className="py-3.5 px-6">Role</th>
+                      <th className="py-3.5 px-6">Wallet Balance</th>
+                      <th className="py-3.5 px-6">Status</th>
+                      <th className="py-3.5 px-6 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-slate-400 font-medium">
+                          No users found matching your search.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredUsers.map((u) => (
+                        <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-200 shrink-0">
+                                {u.avatarUrl ? (
+                                  <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full bg-slate-700 text-white font-bold flex items-center justify-center text-sm">
+                                    {u.name?.[0] || 'U'}
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-extrabold text-slate-900">{u.name}</p>
+                                <p className="text-xs text-slate-400">ID: {u.id.slice(0, 8)}...</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 text-slate-600 text-xs font-medium">
+                            <div>{u.phone || 'No phone'}</div>
+                            <div className="text-slate-400">{u.email || 'No email'}</div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span
+                              className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                                u.role === 'CREATOR' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 font-extrabold text-slate-900">
+                            {u.walletBalance} Diamonds
+                          </td>
+                          <td className="py-4 px-6">
+                            <span
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                                u.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                              }`}
+                            >
+                              {u.isActive ? 'Active' : 'Blocked'}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-right">
+                            <button
+                              onClick={() => handleToggleUserBlock(u.id)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                                u.isActive
+                                  ? 'bg-rose-50 text-rose-600 hover:bg-rose-100'
+                                  : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                              }`}
+                            >
+                              {u.isActive ? 'Block User' : 'Unblock'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
+          )}
 
-            {/* TAB 1: PENDING QUEUE */}
-            {activeTab === 'pending' && (
-              <div className="bg-white rounded-2xl border border-[#E4E4E7] shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-[#F4F4F5] flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-sm text-[#111111]">Pending Creator Verifications</h3>
-                    <p className="text-xs text-[#71717A]">
-                      Approve applications submitted from the mobile app to make them live on the Home Screen.
-                    </p>
-                  </div>
-                  <span className="text-xs font-bold text-[#71717A]">{pendingApps.length} in queue</span>
+          {/* VIEW 3: CREATOR MANAGEMENT */}
+          {activeMenu === 'creators' && (
+            <div className="space-y-6 max-w-7xl mx-auto">
+              {/* Creator Sub-Tabs */}
+              <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setCreatorSubTab('pending')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                      creatorSubTab === 'pending'
+                        ? 'bg-slate-900 text-white shadow'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    Pending Verification ({pendingApps.length})
+                  </button>
+                  <button
+                    onClick={() => setCreatorSubTab('directory')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                      creatorSubTab === 'directory'
+                        ? 'bg-slate-900 text-white shadow'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    Active Creators Directory ({creatorsList.length})
+                  </button>
                 </div>
 
-                {pendingApps.length === 0 ? (
-                  <div className="py-16 text-center space-y-2">
-                    <CheckCircle2 className="w-10 h-10 text-[#A1A1AA] mx-auto stroke-1" />
-                    <p className="text-sm font-bold text-[#52525B]">Queue is All Caught Up!</p>
-                    <p className="text-xs text-[#A1A1AA]">
-                      No creator applications currently awaiting verification.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-[#F4F4F5]">
-                    {pendingApps.map((app) => (
-                      <div key={app.id} className="p-5 hover:bg-[#FAFAFA] transition flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-start space-x-4">
-                          <img
-                            src={app.photoUrl || app.user?.profile?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
-                            alt={app.legalName}
-                            className="w-14 h-14 rounded-2xl object-cover border border-[#E4E4E7] shrink-0"
-                          />
-                          <div className="space-y-1">
-                            <div className="flex items-center space-x-2">
-                              <h4 className="font-extrabold text-sm text-[#111111]">{app.legalName}</h4>
-                              <span className="text-xs text-[#71717A] font-semibold">({app.age} yrs)</span>
-                              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                                ₹299 Paid
-                              </span>
+                <button
+                  onClick={() => setCreatorSubTab('add')}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm"
+                >
+                  <Plus className="w-4 h-4" /> Add Creator Directly
+                </button>
+              </div>
+
+              {/* Sub-tab 1: Pending Queue */}
+              {creatorSubTab === 'pending' && (
+                <div>
+                  {pendingApps.length === 0 ? (
+                    <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center">
+                      <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-500 mb-2" />
+                      <h4 className="text-base font-extrabold text-slate-900">Zero Pending Applications</h4>
+                      <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                        All creator KYC verification requests have been processed. New submissions from the mobile app
+                        will appear here instantly.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {pendingApps.map((app) => (
+                        <div key={app.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-14 h-14 rounded-full overflow-hidden bg-slate-200">
+                                {app.photoUrl ? (
+                                  <img src={app.photoUrl} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full bg-indigo-600 text-white font-bold flex items-center justify-center text-lg">
+                                    {app.legalName?.[0] || 'C'}
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <h4 className="font-extrabold text-slate-900">{app.legalName}</h4>
+                                <p className="text-xs text-slate-500">{app.profession}</p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">{app.age} yrs • {app.govtIdType}</p>
+                              </div>
                             </div>
+                            <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
+                              Pending
+                            </span>
+                          </div>
 
-                            <p className="text-xs font-medium text-[#52525B]">
-                              {app.profession} • Call Rate: <span className="font-bold text-[#111111]">{app.videoCallPrice} coins/min</span>
-                            </p>
-
-                            <div className="flex items-center space-x-3 text-[11px] text-[#71717A]">
-                              <span>ID: {app.govtIdType}</span>
-                              {app.payoutUpiId && <span>UPI: {app.payoutUpiId}</span>}
-                              {app.socialHandle && (
-                                <span className="text-[#111111] font-semibold">@{app.socialHandle}</span>
-                              )}
+                          <div className="bg-slate-50 p-3 rounded-xl space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Subscription:</span>
+                              <span className="font-bold text-slate-900">₹299 Creator Pass (Paid)</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Payout UPI:</span>
+                              <span className="font-bold text-indigo-600">{app.payoutUpiId || 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Rates:</span>
+                              <span className="font-bold text-slate-900">{app.videoCallPrice} Coins/min</span>
                             </div>
                           </div>
+
+                          <div className="flex items-center gap-2 pt-2">
+                            <button
+                              onClick={() => setSelectedKycApp(app)}
+                              className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5"
+                            >
+                              <Eye className="w-3.5 h-3.5" /> Inspect KYC
+                            </button>
+                            <button
+                              onClick={() => handleApproveCreator(app.id)}
+                              className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-600/20"
+                            >
+                              <Check className="w-3.5 h-3.5" /> Approve & Live
+                            </button>
+                          </div>
                         </div>
-
-                        <div className="flex items-center space-x-2 self-end md:self-center">
-                          <button
-                            onClick={() => setSelectedKycApp(app)}
-                            className="px-3 py-1.5 rounded-xl border border-[#E4E4E7] text-xs font-bold text-[#52525B] hover:bg-[#F4F4F5] flex items-center space-x-1"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>Inspect KYC</span>
-                          </button>
-
-                          <button
-                            onClick={() => setRejectingAppId(app.id)}
-                            className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-700 bg-rose-50 text-xs font-bold hover:bg-rose-100 flex items-center space-x-1"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>Reject</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleApprove(app.id)}
-                            className="px-3.5 py-1.5 rounded-xl bg-[#111111] text-white text-xs font-bold hover:bg-[#27272A] shadow-sm flex items-center space-x-1"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Approve & Make Live</span>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* TAB 2: ACTIVE CREATORS DIRECTORY */}
-            {activeTab === 'directory' && (
-              <div className="bg-white rounded-2xl border border-[#E4E4E7] shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-[#F4F4F5] flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-sm text-[#111111]">Active Creators Directory</h3>
-                    <p className="text-xs text-[#71717A]">
-                      Manage live profiles, toggle homepage feature, or activate/deactivate accounts.
-                    </p>
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              )}
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-[#FAFAFA] border-b border-[#E4E4E7] text-[#71717A] uppercase text-[10px] font-bold tracking-wider">
-                        <th className="py-3 px-4">Creator</th>
-                        <th className="py-3 px-4">Profession & Pricing</th>
-                        <th className="py-3 px-4">Live Status</th>
-                        <th className="py-3 px-4">Home Feature</th>
-                        <th className="py-3 px-4 text-right">Actions</th>
+              {/* Sub-tab 2: Active Directory */}
+              {creatorSubTab === 'directory' && (
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      <tr>
+                        <th className="py-3.5 px-6">Creator</th>
+                        <th className="py-3.5 px-6">Rates</th>
+                        <th className="py-3.5 px-6">Rating</th>
+                        <th className="py-3.5 px-6">Active / Inactive</th>
+                        <th className="py-3.5 px-6">Currently Live</th>
+                        <th className="py-3.5 px-6">Homepage Feature</th>
+                        <th className="py-3.5 px-6 text-right">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#F4F4F5]">
-                      {creators.length === 0 ? (
+                    <tbody className="divide-y divide-slate-100">
+                      {creatorsList.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="py-12 text-center text-[#A1A1AA]">
-                            No creators in database yet. Click "+ Add Creator" or approve from queue.
+                          <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
+                            No approved creators yet. Approve applicants from the Pending Queue.
                           </td>
                         </tr>
                       ) : (
-                        creators.map((c) => (
-                          <tr key={c.id} className="hover:bg-[#FAFAFA] transition">
-                            <td className="py-3.5 px-4">
-                              <div className="flex items-center space-x-3">
-                                <img
-                                  src={c.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'}
-                                  alt={c.name}
-                                  className="w-10 h-10 rounded-xl object-cover border border-[#E4E4E7]"
-                                />
+                        creatorsList.map((c) => (
+                          <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="py-4 px-6">
+                              <div className="flex items-center gap-3">
+                                <img src={c.photoUrl} alt="" className="w-10 h-10 rounded-full object-cover bg-slate-200" />
                                 <div>
-                                  <div className="font-extrabold text-[#111111]">{c.name}</div>
-                                  <div className="text-[11px] text-[#71717A]">{c.age} yrs • {c.phone}</div>
+                                  <p className="font-extrabold text-slate-900">{c.name}</p>
+                                  <p className="text-xs text-slate-400">{c.profession}</p>
                                 </div>
                               </div>
                             </td>
-
-                            <td className="py-3.5 px-4">
-                              <div className="font-semibold text-[#111111]">{c.profession}</div>
-                              <div className="text-[#71717A]">{c.videoCallPrice} coins/min (Video)</div>
+                            <td className="py-4 px-6 text-xs font-bold text-slate-700">
+                              {c.videoCallPrice} Coins/min
                             </td>
-
-                            <td className="py-3.5 px-4">
+                            <td className="py-4 px-6 font-bold text-amber-500 text-xs">
+                              ★ {c.rating} ({c.reviewCount})
+                            </td>
+                            <td className="py-4 px-6">
                               <button
                                 onClick={() => handleToggleCreatorActive(c.id, c.isActive)}
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition ${
-                                  c.isActive
-                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                    : 'bg-zinc-100 text-zinc-600 border-zinc-300'
+                                className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                                  c.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
                                 }`}
                               >
-                                {c.isActive ? 'Active (Live)' : 'Inactive (Hidden)'}
+                                {c.isActive ? 'Active' : 'Inactive'}
                               </button>
                             </td>
-
-                            <td className="py-3.5 px-4">
+                            <td className="py-4 px-6">
+                              <span
+                                className={`inline-flex items-center gap-1.5 text-xs font-bold ${
+                                  c.isOnline ? 'text-emerald-600' : 'text-slate-400'
+                                }`}
+                              >
+                                <span className={`w-2 h-2 rounded-full ${c.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                                {c.isOnline ? 'Online' : 'Offline'}
+                              </span>
+                            </td>
+                            <td className="py-4 px-6">
                               <button
-                                onClick={() => handleToggleCreatorFeatured(c.id, c.isFeatured)}
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition ${
-                                  c.isFeatured
-                                    ? 'bg-[#111111] text-white border-[#111111]'
-                                    : 'bg-white text-[#71717A] border-[#E4E4E7]'
+                                onClick={() => handleToggleFeatured(c.id, c.isFeatured)}
+                                className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                                  c.isFeatured ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-500'
                                 }`}
                               >
-                                {c.isFeatured ? '★ Featured on Top' : 'Standard'}
+                                {c.isFeatured ? 'Featured' : 'Standard'}
                               </button>
                             </td>
-
-                            <td className="py-3.5 px-4 text-right">
+                            <td className="py-4 px-6 text-right">
                               <button
                                 onClick={() => handleToggleCreatorActive(c.id, true)}
-                                className="text-xs font-semibold text-[#71717A] hover:text-[#111111] underline"
+                                className="text-xs font-bold text-rose-600 hover:text-rose-800"
                               >
-                                Toggle State
+                                Deactivate
                               </button>
                             </td>
                           </tr>
@@ -708,238 +1123,428 @@ export default function App() {
                     </tbody>
                   </table>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* TAB 3: ADD NEW CREATOR MANUALLY */}
-            {activeTab === 'add' && (
-              <div className="bg-white rounded-2xl border border-[#E4E4E7] p-6 shadow-sm">
-                <div className="mb-6">
-                  <h3 className="font-bold text-base text-[#111111]">Direct Creator Onboarding</h3>
-                  <p className="text-xs text-[#71717A]">
-                    Add a creator profile directly to the mobile app without manual mobile signup.
+              {/* Sub-tab 3: Add Creator Directly Form */}
+              {creatorSubTab === 'add' && (
+                <div className="bg-white rounded-2xl border border-slate-200 p-8 max-w-2xl mx-auto shadow-sm">
+                  <h3 className="text-base font-extrabold text-slate-900 mb-1">Onboard Creator Directly</h3>
+                  <p className="text-xs text-slate-500 mb-6">
+                    Bypass user self-application and publish a verified creator straight to the mobile app home feed.
                   </p>
-                </div>
 
-                <form onSubmit={handleCreateDirectCreator} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <form onSubmit={handleDirectCreate} className="space-y-4">
                     <div>
-                      <label className="block text-xs font-semibold text-[#52525B] mb-1">
-                        Creator Full Name *
-                      </label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Creator Name</label>
                       <input
                         type="text"
                         required
                         value={newCreatorForm.name}
                         onChange={(e) => setNewCreatorForm({ ...newCreatorForm, name: e.target.value })}
-                        placeholder="e.g. Aanya Singhania"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-[#E4E4E7] text-xs font-medium focus:ring-2 focus:ring-[#111111] outline-none"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                        placeholder="e.g. Priya Sharma"
                       />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Age</label>
+                        <input
+                          type="number"
+                          value={newCreatorForm.age}
+                          onChange={(e) => setNewCreatorForm({ ...newCreatorForm, age: Number(e.target.value) })}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Profession</label>
+                        <input
+                          type="text"
+                          required
+                          value={newCreatorForm.profession}
+                          onChange={(e) => setNewCreatorForm({ ...newCreatorForm, profession: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                        />
+                      </div>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-[#52525B] mb-1">
-                        Age (Years)
-                      </label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Profile Photo URL</label>
                       <input
-                        type="number"
-                        min="18"
-                        max="80"
-                        value={newCreatorForm.age}
-                        onChange={(e) => setNewCreatorForm({ ...newCreatorForm, age: Number(e.target.value) })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-[#E4E4E7] text-xs font-medium focus:ring-2 focus:ring-[#111111] outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-[#52525B] mb-1">
-                        Profession / Category *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={newCreatorForm.profession}
-                        onChange={(e) => setNewCreatorForm({ ...newCreatorForm, profession: e.target.value })}
-                        placeholder="e.g. Relationship Coach / Lifestyle"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-[#E4E4E7] text-xs font-medium focus:ring-2 focus:ring-[#111111] outline-none"
+                        type="url"
+                        value={newCreatorForm.photoUrl}
+                        onChange={(e) => setNewCreatorForm({ ...newCreatorForm, photoUrl: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                        placeholder="https://images.unsplash.com/photo-..."
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-[#52525B] mb-1">
-                        Video Call Price (Coins/Min)
-                      </label>
-                      <input
-                        type="number"
-                        value={newCreatorForm.videoCallPrice}
-                        onChange={(e) => setNewCreatorForm({ ...newCreatorForm, videoCallPrice: Number(e.target.value) })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-[#E4E4E7] text-xs font-medium focus:ring-2 focus:ring-[#111111] outline-none"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Video Call Rate (Coins/min)</label>
+                        <input
+                          type="number"
+                          value={newCreatorForm.videoCallPrice}
+                          onChange={(e) =>
+                            setNewCreatorForm({ ...newCreatorForm, videoCallPrice: Number(e.target.value) })
+                          }
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Voice Call Rate (Coins/min)</label>
+                        <input
+                          type="number"
+                          value={newCreatorForm.voiceCallPrice}
+                          onChange={(e) =>
+                            setNewCreatorForm({ ...newCreatorForm, voiceCallPrice: Number(e.target.value) })
+                          }
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                        />
+                      </div>
                     </div>
-                  </div>
 
+                    <div className="pt-4 flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setCreatorSubTab('directory')}
+                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow"
+                      >
+                        Publish Creator Live
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* VIEW 4: WALLET & DIAMONDS */}
+          {activeMenu === 'wallet' && (
+            <div className="space-y-6 max-w-7xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <MetricCard
+                  title="Diamonds Sold (All Time)"
+                  value={stats.totalDiamondsSold.toLocaleString()}
+                  subtext="Purchased by user accounts"
+                  change="Total"
+                  icon={<Coins className="w-5 h-5 text-emerald-600" />}
+                  iconBg="bg-emerald-50"
+                />
+                <MetricCard
+                  title="Total Revenue Generated"
+                  value={`₹${stats.totalRevenue.toLocaleString()}`}
+                  subtext="Converted from INR gateways"
+                  change="Revenue"
+                  icon={<DollarSign className="w-5 h-5 text-indigo-600" />}
+                  iconBg="bg-indigo-50"
+                />
+                <MetricCard
+                  title="Emergency Balance Freeze"
+                  value={settings.isFreezeBalance ? 'FROZEN' : 'ACTIVE'}
+                  subtext="Administrative restriction"
+                  change={settings.isFreezeBalance ? 'Restricted' : 'Normal'}
+                  icon={<Lock className="w-5 h-5 text-rose-600" />}
+                  iconBg="bg-rose-50"
+                />
+              </div>
+
+              {/* Diamond Package Configuration */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                <h3 className="text-base font-extrabold text-slate-900 mb-1">Standard Diamond Recharge Packages</h3>
+                <p className="text-xs text-slate-500 mb-5">Current pricing tiers shown inside mobile app wallet.</p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                  {[
+                    { diamonds: 200, inr: 100 },
+                    { diamonds: 300, inr: 150 },
+                    { diamonds: 500, inr: 250 },
+                    { diamonds: 800, inr: 400 },
+                    { diamonds: 1000, inr: 500 },
+                    { diamonds: 2000, inr: 1000 },
+                  ].map((pkg) => (
+                    <div key={pkg.diamonds} className="p-4 rounded-xl border border-slate-200 text-center bg-slate-50">
+                      <Coins className="w-6 h-6 text-amber-500 mx-auto mb-1" />
+                      <p className="font-black text-slate-900 text-base">{pkg.diamonds}</p>
+                      <p className="text-xs text-slate-500">Diamonds</p>
+                      <p className="text-sm font-black text-indigo-600 mt-2">₹{pkg.inr}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* VIEW 5: PAYMENTS & TRANSACTIONS */}
+          {activeMenu === 'transactions' && (
+            <div className="space-y-6 max-w-7xl mx-auto">
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+                  <h3 className="text-base font-extrabold text-slate-900">Payment & Transaction Ledger</h3>
+                  <span className="text-xs font-bold text-slate-500">{allTxns.length} Total Records</span>
+                </div>
+
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3.5 px-6">Reference ID</th>
+                      <th className="py-3.5 px-6">User</th>
+                      <th className="py-3.5 px-6">Package</th>
+                      <th className="py-3.5 px-6">Amount</th>
+                      <th className="py-3.5 px-6">Status</th>
+                      <th className="py-3.5 px-6 text-right">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {allTxns.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-slate-400 font-medium">
+                          No transactions recorded yet in PostgreSQL.
+                        </td>
+                      </tr>
+                    ) : (
+                      allTxns.map((t) => (
+                        <tr key={t.id} className="hover:bg-slate-50/50">
+                          <td className="py-4 px-6 font-mono text-xs text-slate-500">{t.referenceId}</td>
+                          <td className="py-4 px-6 font-extrabold text-slate-900">{t.userName}</td>
+                          <td className="py-4 px-6 text-xs text-slate-600 font-medium">{t.description}</td>
+                          <td className="py-4 px-6 font-black text-slate-900">₹{t.amountInr}</td>
+                          <td className="py-4 px-6">
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                              {t.status}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-right text-xs text-slate-400 font-medium">
+                            {new Date(t.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* VIEW 6: LIVE CALLS & SESSIONS */}
+          {activeMenu === 'calls' && (
+            <div className="space-y-6 max-w-7xl mx-auto">
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+                  <h3 className="text-base font-extrabold text-slate-900">Video & Voice Call Sessions</h3>
+                  <span className="text-xs font-bold text-slate-500">{allCalls.length} Recorded Sessions</span>
+                </div>
+
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3.5 px-6">Session ID</th>
+                      <th className="py-3.5 px-6">Caller User</th>
+                      <th className="py-3.5 px-6">Creator</th>
+                      <th className="py-3.5 px-6">Type</th>
+                      <th className="py-3.5 px-6">Duration</th>
+                      <th className="py-3.5 px-6">Coins Spent</th>
+                      <th className="py-3.5 px-6 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {allCalls.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
+                          No live call sessions initiated yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      allCalls.map((c) => (
+                        <tr key={c.id} className="hover:bg-slate-50/50">
+                          <td className="py-4 px-6 font-mono text-xs text-slate-500">{c.id.slice(0, 8)}</td>
+                          <td className="py-4 px-6 font-extrabold text-slate-900">{c.callerName}</td>
+                          <td className="py-4 px-6 font-extrabold text-indigo-600">{c.creatorName}</td>
+                          <td className="py-4 px-6 text-xs font-bold text-slate-600">{c.callType}</td>
+                          <td className="py-4 px-6 text-xs text-slate-600">{c.durationFormatted}</td>
+                          <td className="py-4 px-6 font-black text-slate-900">{c.coins} Diamonds</td>
+                          <td className="py-4 px-6 text-right">
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                              {c.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* VIEW 7: APP SETTINGS */}
+          {activeMenu === 'settings' && (
+            <div className="space-y-6 max-w-4xl mx-auto">
+              <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm space-y-6">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">Wallet & App Controls</h3>
+                  <p className="text-xs text-slate-500 mt-1">Configure global platform kill-switches and financial security.</p>
+                </div>
+
+                {/* Freeze Balance Toggle */}
+                <div className="p-4 rounded-xl border border-slate-200 flex items-center justify-between">
                   <div>
-                    <label className="block text-xs font-semibold text-[#52525B] mb-1">
-                      Profile Photo Image URL *
-                    </label>
+                    <p className="font-extrabold text-sm text-slate-900">Freeze Diamond Balance</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Restrict diamond usage across all user accounts according to administrative rules.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleUpdateSettings({ isFreezeBalance: !settings.isFreezeBalance })}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      settings.isFreezeBalance
+                        ? 'bg-rose-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {settings.isFreezeBalance ? 'Freeze Enabled' : 'Freeze Disabled'}
+                  </button>
+                </div>
+
+                {/* Video Connection Killswitch */}
+                <div className="p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <p className="font-extrabold text-sm text-slate-900">Video Connection Control</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Allow or globally block users from initiating new video calls.</p>
+                  </div>
+                  <button
+                    onClick={() => handleUpdateSettings({ isVideoConnectionEnabled: !settings.isVideoConnectionEnabled })}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      settings.isVideoConnectionEnabled
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'bg-rose-600 text-white shadow-sm'
+                    }`}
+                  >
+                    {settings.isVideoConnectionEnabled ? 'Connections Enabled' : 'Connections Blocked'}
+                  </button>
+                </div>
+
+                {/* Payment Account Configuration */}
+                <div className="p-5 rounded-xl border border-slate-200 space-y-3">
+                  <div>
+                    <p className="font-extrabold text-sm text-slate-900">Payment Account Configuration</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Official administrative UPI ID receiving payment remittances and deposits.
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
                     <input
-                      type="url"
-                      required
-                      value={newCreatorForm.photoUrl}
-                      onChange={(e) => setNewCreatorForm({ ...newCreatorForm, photoUrl: e.target.value })}
-                      placeholder="https://..."
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#E4E4E7] text-xs font-medium focus:ring-2 focus:ring-[#111111] outline-none"
+                      type="text"
+                      value={upiInput}
+                      onChange={(e) => setUpiInput(e.target.value)}
+                      className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-indigo-600"
+                      placeholder="e.g. XYX12438383@ybl"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[#52525B] mb-1">
-                      Creator Bio / Description
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={newCreatorForm.bio}
-                      onChange={(e) => setNewCreatorForm({ ...newCreatorForm, bio: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#E4E4E7] text-xs font-medium focus:ring-2 focus:ring-[#111111] outline-none"
-                    />
-                  </div>
-
-                  <div className="flex items-center space-x-6 pt-2">
-                    <label className="flex items-center space-x-2 text-xs font-semibold cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={newCreatorForm.isActive}
-                        onChange={(e) => setNewCreatorForm({ ...newCreatorForm, isActive: e.target.checked })}
-                        className="rounded border-[#E4E4E7]"
-                      />
-                      <span>Publish as Active (Visible immediately)</span>
-                    </label>
-
-                    <label className="flex items-center space-x-2 text-xs font-semibold cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={newCreatorForm.isFeatured}
-                        onChange={(e) => setNewCreatorForm({ ...newCreatorForm, isFeatured: e.target.checked })}
-                        className="rounded border-[#E4E4E7]"
-                      />
-                      <span>Pin to Top of Feed (Featured)</span>
-                    </label>
-                  </div>
-
-                  <div className="pt-4 flex justify-end">
                     <button
-                      type="submit"
-                      className="px-6 py-2.5 rounded-xl bg-[#111111] text-white text-xs font-bold hover:bg-[#27272A] shadow-sm transition"
+                      onClick={() => handleUpdateSettings({ paymentUpiId: upiInput })}
+                      className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow"
                     >
-                      Publish Creator to Mobile App
+                      Save UPI
                     </button>
                   </div>
-                </form>
+                </div>
               </div>
-            )}
-          </section>
+            </div>
+          )}
+        </main>
+      </div>
 
-        </div>
-      </main>
-
-      {/* KYC Inspector Modal */}
+      {/* =========================================================================
+          KYC INSPECTOR MODAL
+          ========================================================================= */}
       {selectedKycApp && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-[#E4E4E7] space-y-5">
-            <div className="flex items-center justify-between border-b border-[#F4F4F5] pb-3">
-              <h3 className="font-extrabold text-base">KYC Document Inspection</h3>
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-slate-200 space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Applicant KYC Verification</h3>
+                <p className="text-xs text-slate-400">Review government identification & banking details</p>
+              </div>
               <button
                 onClick={() => setSelectedKycApp(null)}
-                className="text-[#71717A] hover:text-[#111111] font-bold"
+                className="p-2 rounded-xl text-slate-400 hover:bg-slate-100"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-4 text-xs">
-              <div className="flex items-center space-x-4">
-                <img
-                  src={selectedKycApp.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
-                  alt={selectedKycApp.legalName}
-                  className="w-16 h-16 rounded-2xl object-cover border border-[#E4E4E7]"
-                />
-                <div>
-                  <h4 className="font-bold text-sm">{selectedKycApp.legalName} ({selectedKycApp.age} yrs)</h4>
-                  <p className="text-[#71717A]">{selectedKycApp.profession}</p>
-                  <p className="text-[#52525B]">Payout UPI: <span className="font-bold">{selectedKycApp.payoutUpiId || 'Not provided'}</span></p>
-                </div>
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <span className="text-slate-400">Full Legal Name:</span>
+                <p className="font-extrabold text-slate-900 text-sm mt-0.5">{selectedKycApp.legalName}</p>
               </div>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <span className="text-slate-400">Age:</span>
+                <p className="font-extrabold text-slate-900 text-sm mt-0.5">{selectedKycApp.age} years</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <span className="text-slate-400">Govt ID Type:</span>
+                <p className="font-extrabold text-slate-900 text-sm mt-0.5">{selectedKycApp.govtIdType}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <span className="text-slate-400">Payout UPI ID:</span>
+                <p className="font-extrabold text-indigo-600 text-sm mt-0.5">{selectedKycApp.payoutUpiId || 'N/A'}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl col-span-2">
+                <span className="text-slate-400">Creator Bio:</span>
+                <p className="font-medium text-slate-700 mt-1">{selectedKycApp.bio || 'No bio provided.'}</p>
+              </div>
+            </div>
 
-              <div className="p-4 rounded-xl bg-[#FAFAFA] border border-[#E4E4E7] space-y-2">
-                <div className="font-bold text-[#111111]">Document Details</div>
-                <div className="flex justify-between text-[#71717A]">
-                  <span>Govt ID Type:</span>
-                  <span className="font-semibold text-[#111111]">{selectedKycApp.govtIdType}</span>
-                </div>
-                <div className="flex justify-between text-[#71717A]">
-                  <span>Subscription Status:</span>
-                  <span className="font-semibold text-emerald-700">₹299/mo Paid</span>
-                </div>
-                <div className="flex justify-between text-[#71717A]">
-                  <span>Social Handle:</span>
-                  <span className="font-semibold text-[#111111]">@{selectedKycApp.socialHandle || 'none'}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end space-x-3 pt-2">
-                <button
-                  onClick={() => {
-                    setRejectingAppId(selectedKycApp.id);
-                    setSelectedKycApp(null);
-                  }}
-                  className="px-4 py-2 rounded-xl border border-rose-200 text-rose-700 text-xs font-bold hover:bg-rose-50"
-                >
-                  Reject Application
-                </button>
-                <button
-                  onClick={() => handleApprove(selectedKycApp.id)}
-                  className="px-5 py-2 rounded-xl bg-[#111111] text-white text-xs font-bold hover:bg-[#27272A]"
-                >
-                  Approve & Publish to Feed
-                </button>
-              </div>
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setSelectedKycApp(null)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => handleApproveCreator(selectedKycApp.id)}
+                className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm"
+              >
+                Approve & Publish to Mobile Feed
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Rejection Reason Modal */}
+      {/* =========================================================================
+          REJECTION FEEDBACK MODAL
+          ========================================================================= */}
       {rejectingAppId && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[#E4E4E7] space-y-4">
-            <h3 className="font-extrabold text-base text-rose-700">Reject Application</h3>
-            <p className="text-xs text-[#71717A]">
-              Provide feedback for why this application was not approved. The applicant can re-submit after fixing.
-            </p>
-
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <h3 className="text-base font-extrabold text-slate-900">Reason for Rejection</h3>
+            <p className="text-xs text-slate-500">Provide helpful feedback to the applicant so they can re-apply.</p>
             <textarea
               rows={3}
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="e.g. Identity proof was blurry, or age was below 18."
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E4E4E7] text-xs font-medium focus:ring-2 focus:ring-rose-500 outline-none"
+              placeholder="e.g. Government ID was blurred. Please re-submit a clear photo."
+              className="w-full p-3 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-rose-500"
             />
-
-            <div className="flex items-center justify-end space-x-2 pt-2">
+            <div className="flex justify-end gap-2 pt-2">
               <button
-                onClick={() => {
-                  setRejectingAppId(null);
-                  setRejectionReason('');
-                }}
-                className="px-4 py-2 rounded-xl border border-[#E4E4E7] text-xs font-bold text-[#71717A]"
+                onClick={() => setRejectingAppId(null)}
+                className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold"
               >
                 Cancel
               </button>
               <button
-                onClick={handleReject}
-                className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700"
+                onClick={handleRejectCreator}
+                className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold"
               >
                 Confirm Rejection
               </button>
@@ -951,3 +1556,70 @@ export default function App() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Helper Subcomponents
+// ---------------------------------------------------------------------------
+function SidebarItem({
+  icon,
+  label,
+  active,
+  onClick,
+  badge,
+  badgeColor = 'bg-slate-800 text-slate-300',
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  badge?: string;
+  badgeColor?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+        active
+          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+          : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        {icon}
+        <span>{label}</span>
+      </div>
+      {badge && <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${badgeColor}`}>{badge}</span>}
+    </button>
+  );
+}
+
+function MetricCard({
+  title,
+  value,
+  subtext,
+  change,
+  icon,
+  iconBg,
+}: {
+  title: string;
+  value: string;
+  subtext: string;
+  change: string;
+  icon: React.ReactNode;
+  iconBg: string;
+}) {
+  return (
+    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{title}</span>
+        <div className={`p-2.5 rounded-xl ${iconBg}`}>{icon}</div>
+      </div>
+      <div>
+        <h3 className="text-2xl font-black text-slate-900 tracking-tight">{value}</h3>
+        <div className="flex items-center justify-between mt-1 text-xs">
+          <span className="text-slate-400 font-medium">{subtext}</span>
+          <span className="font-bold text-indigo-600">{change}</span>
+        </div>
+      </div>
+    </div>
+  );
+}

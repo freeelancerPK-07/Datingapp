@@ -302,7 +302,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
 
       final userId = res['user']['id'];
       final token = res['token'];
-      final profile = res['user']['profile'];
+      final profile = res['user']['profile'] as Map<String, dynamic>?;
       final bool isProfileCompleted = res['isProfileCompleted'] == true ||
           (profile != null && profile['isCompleted'] == true);
 
@@ -312,6 +312,8 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
           userId: userId.toString(),
           isProfileCompleted: isProfileCompleted,
           phone: phone,
+          name: profile?['name']?.toString(),
+          profile: profile,
         );
       }
 

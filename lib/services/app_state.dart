@@ -48,12 +48,14 @@ class AppState extends ChangeNotifier {
     String? email,
     String? name,
     String? phone,
+    Map<String, dynamic>? profile,
   }) async {
     _backendUserId = userId;
     setProfileCompleted(isProfileCompleted);
     ApiService.instance.setAuthToken(token);
     if (name != null && name.isNotEmpty) _userName = name;
     if (phone != null && phone.isNotEmpty) _userPhone = phone;
+    if (profile != null) restoreUserProfileFromDb(profile);
 
     try {
       await _storage.write(key: 'user_token', value: token);
@@ -68,6 +70,44 @@ class AppState extends ChangeNotifier {
 
     syncWalletFromBackend();
     syncCreatorsFromBackend();
+    notifyListeners();
+  }
+
+  void restoreUserProfileFromDb(Map<String, dynamic> profileMap) {
+    final name = profileMap['name'] as String?;
+    final avatar = profileMap['avatarUrl'] as String?;
+    final bio = profileMap['bio'] as String?;
+    final city = profileMap['city'] as String?;
+    final state = profileMap['state'] as String?;
+    final country = profileMap['country'] as String?;
+    final isCompleted = profileMap['isCompleted'] == true;
+
+    final gallery = profileMap['galleryPhotos'] != null
+        ? List<String>.from(profileMap['galleryPhotos'])
+        : <String>[];
+    final interests = profileMap['interests'] != null
+        ? List<String>.from(profileMap['interests'])
+        : <String>[];
+    final languages = profileMap['languages'] != null
+        ? List<String>.from(profileMap['languages'])
+        : <String>[];
+
+    _userProfile = _userProfile.copyWith(
+      name: (name != null && name.isNotEmpty) ? name : _userProfile.name,
+      photoUrl: (avatar != null && avatar.isNotEmpty) ? avatar : _userProfile.photoUrl,
+      bio: (bio != null && bio.isNotEmpty) ? bio : _userProfile.bio,
+      city: (city != null && city.isNotEmpty) ? city : _userProfile.city,
+      state: (state != null && state.isNotEmpty) ? state : _userProfile.state,
+      country: (country != null && country.isNotEmpty) ? country : _userProfile.country,
+      galleryPhotos: gallery.isNotEmpty ? gallery : _userProfile.galleryPhotos,
+      interests: interests.isNotEmpty ? interests : _userProfile.interests,
+      languages: languages.isNotEmpty ? languages : _userProfile.languages,
+      profileCompleted: isCompleted,
+    );
+
+    if (name != null && name.isNotEmpty) _userName = name;
+    if (bio != null && bio.isNotEmpty) _userBio = bio;
+    if (city != null && city.isNotEmpty) _userCity = city;
     notifyListeners();
   }
 
