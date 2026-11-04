@@ -1,187 +1,230 @@
-# LinkUp — Dating, Creator Discovery & Live Video Consultation App
+# 🚀 LinkUp — Real-Time 1-on-1 Creator Video Consultation & Discovery Platform
 
-LinkUp is a next-generation Flutter mobile application engineered for authentic connections, creator discovery, and real-time private 1-on-1 HD video consultations. Built with modern design aesthetics, a unified **Mint & Teal** visual theme, responsive layouts, and zero UI overflow errors.
+**LinkUp** is an enterprise-grade, full-stack real-time platform engineered for private 1-on-1 HD video calling, creator discovery, instant messaging, and a diamond coin wallet economy.
 
----
-
-## Key Features & Capabilities
-
-### 1.Authentication & Onboarding
-* **Visual Welcome Screen**: Ambient gradient aesthetics with custom scale and slide route transitions.
-* **Flexible Sign-In & Sign-Up**: Name, email, password validation, visibility toggles, and Google/Phone auth options.
-* **Mobile OTP Verification Flow**: 6-digit challenge code entry with auto-focus and resend countdown timer.
-* **Password Recovery**: Clean reset request handling with safety feedback.
+Built with **Flutter (Mobile & Web)**, a **Node.js + Express + TypeScript** real-time backend with **Prisma ORM & PostgreSQL 18**, and a **Vite + Tailwind CSS** admin dashboard.
 
 ---
 
-### 2.10-Step Profile Completion Engine
-* **100% Comprehensive Profile Setup**:
-  1. Full Name & Display Name
-  2. Date of Birth & Age Calculation (18+ verification)
-  3. Gender & Sexual Orientation ("Looking For...")
-  4. Multi-Photo Gallery (Primary photo selector, photo reordering, upload slot)
-  5. Relationship Goals (Long-term, Casual dating, Deep conversations, Marriage vibe)
-  6. Profile Prompts (Icebreakers, conversation starters, voice note prompts)
-  7. Lifestyle & Interests (Dance, Fashion, Fitness, Travel, Music, Technology)
-  8. City, Country & Location preferences
-  9. Languages Spoken (Tamil, English, Hindi, Telugu, Malayalam, Kannada, etc.)
-  10. Profile Review & 100% Verification Badge
-* **Progress Tracking**: Real-time progress bar displaying completion percentage (`Step X of 10 • Y% Completed`).
-* **Privacy & Safety Settings**: Toggle online visibility, hide distance, and blocked users management.
-
----
-
-### 3.100% Profile Completion Gate for Creator Discovery
-* **Hero Gradient Header Widget**: Always anchored at the top of the Home screen with greeting, brand mark, country selector, diamond balance, and Instagram-style favorites widget.
-* **Gated Feed Access**:
-  * If the user's profile is incomplete (`!isProfileCompleted`), a dedicated **Completion Banner** appears directly below the top box widget with progress indicators and a one-click *"Complete Profile to Access Creators"* button.
-  * Below the banner, a locked creator teaser card explains that video calls and creator feeds unlock upon reaching 100% completion.
-  * Once completed, full creator profiles, category tabs, and feeds automatically unlock.
-
----
-
-### 4.Instagram-Style Favorites & Saved Activity (`LikedSavedScreen`)
-* **Real-Time Header Badge**: The top-right heart icon on the Home screen header displays an active badge counter reflecting total liked and saved creators.
-* **Dedicated Activity Hub**:
-  * **Liked Tab ❤️**: Displays all liked creator profiles in a modern 2-column card grid.
-  * **Saved Tab 🔖**: Bookmarked creator profiles for quick access later.
-* **Card Features**: Online status badge, rating, diamonds-per-minute rate card, instant "Connect" action, and interactive heart/bookmark toggles.
-
----
-
-### 5.Discover Creators & Feed (`HomeScreen`)
-* **Curated Category Filters**: Featured, Top Rated, Trending, Recommended, and Live Now.
-* **Instagram-Style Feed Posts**: High-resolution media, double-tap to like, distance badges, verified badges, rating pill, follower count, bio caption, and hashtags.
-* **Instant CTA**: Direct "Book Video Call" button with vibrant gradient on every post.
-* **Advanced Multi-Facet Filter Sheet**: Country picker, Gender choice, Age range slider (18–60), Languages multi-select, Online only, and Verified only.
-
----
-
-### 6.Creator Profile & Rate Card (`CreatorDetailScreen`)
-* **Visual Gallery Pager**: Smooth pagination with active dot indicators.
-* **Detailed Bio & Vibe**: About me, verified badge, response time, rating reviews count, and profile prompts.
-* **Platform Standard Services**:
-  * 1-on-1 Private Video Calls (10 min, 20 min, 30 min duration options).
-  * Instant coin conversion and duration selection.
-* **Payment Summary**: Transparent breakdown of coins per minute, total duration, and wallet balance check.
-
----
-
-### 7.Active HD Video Call Experience (`ActiveCallScreen`)
-* **Live Video Controls**: Flip camera, mute audio, toggle video, and speakerphone.
-* **Real-Time Duration & Coin Burn**: Active timer tracking session duration and diamonds consumed.
-* **Transparent Commission Split**: Automated 70/30 revenue distribution (70% to Creator, 30% Platform fee) with dynamic coin calculation.
-* **Rating & Feedback**: Interactive post-call 5-star rating with tag selections.
-
----
-
-### 8.In-App Diamond Wallet & Payments (`WalletScreen`)
-* **Balance Overview**: Active diamond coins balance with quick recharge shortcuts.
-* **Recharge Packages**: Tiered diamond coin packages with bonus diamonds and promotional badges.
-* **Transaction Ledger**: Complete history tracking video call debits, recharge credits, photo purchases, and 100% refund settlements.
-* **Mock Payment Gateways**: UPI (GPay, PhonePe, Paytm), Credit/Debit Cards, Net Banking, and instant simulated success.
-
----
-
-##Unified Mint & Teal Design System
-
-All screens and UI components adhere strictly to a unified color palette and typography system:
-
-| Token | Hex Value | Usage |
-|---|---|---|
-| **Primary Teal** | `#007A78` | Primary brand color, icons, active tab indicators |
-| **Deep Teal** | `#005E5D` | Hero gradients, button gradient start |
-| **Radiant Mint** | `#00A896` | Accents, gradients, rating stars, active badges |
-| **Dark Slate** | `#0F2B32` | Unified text color for all headings, titles, and key elements |
-| **Pale Mint/Teal** | `#E5F7F4` | Chip backgrounds, container fills, avatar rings |
-| **Border Mint** | `#CEF1EB` | Card borders, dividers, subtle outlines |
-
-* **Typography**: Google Fonts (`Plus Jakarta Sans` for clean UI readability, `Playfair Display` for editorial accents).
-* **Responsive Layouts**: Zero pixel-overflow errors across small and large Android & iOS screen sizes.
-
----
-
-##Project Architecture & Structure
+## 🌟 Architecture Overview
 
 ```
-version1/
-├── assets/
-│   ├── fonts/
-│   └── images/
-│       ├── adaptive_bg.png
-│       ├── adaptive_fg.png
-│       ├── app_icon_teal.png
-│       ├── linkup_splash.png
-│       └── skybound_together.png
-├── lib/
-│   ├── main.dart                          # Application entry point
-│   ├── constants/
-│   │   ├── app_icon_base64.dart           # Offline brand logo base64 bytes
-│   │   └── svg_assets.dart                # LinkUpTheme color tokens & vectors
-│   ├── models/
-│   │   ├── creator_model.dart             # Creator data model
-│   │   ├── user_profile_model.dart        # 10-Step User Profile model
-│   │   └── wallet_model.dart              # Wallet transaction model
-│   ├── screens/
-│   │   ├── active_call_screen.dart        # Live video call & commission split
-│   │   ├── creator_detail_screen.dart     # Creator profile, gallery & booking
-│   │   ├── creator_profile_sheet.dart     # Quick bottom sheet profile preview
-│   │   ├── edit_profile_screen.dart       # Edit profile & photo management
-│   │   ├── email_signup_screen.dart       # Email signup screen
-│   │   ├── home_screen.dart               # Main feed, header & 100% completion gate
-│   │   ├── liked_saved_screen.dart        # Instagram-style Favorites & Bookmarks
-│   │   ├── login_screen.dart              # Sign in screen
-│   │   ├── payment_result_screen.dart     # Payment confirmation & receipt
-│   │   ├── phone_verification_screen.dart # 6-digit OTP verification
-│   │   ├── profile_self_screen.dart       # User's own profile preview
-│   │   ├── profile_setup_screen.dart      # 10-Step interactive profile setup
-│   │   ├── recharge_packages_sheet.dart   # Diamond coin packages modal
-│   │   ├── signup_screen.dart             # Sign up screen
-│   │   ├── splash_screen.dart             # Animated splash with precached assets
-│   │   ├── video_calls_screen.dart        # Video call activity & call history
-│   │   ├── wallet_screen.dart             # In-app wallet & ledger
-│   │   └── welcome_screen.dart            # First-run welcome experience
-│   ├── services/
-│   │   ├── api_service.dart               # HTTP client & backend contracts
-│   │   └── app_state.dart                 # Central ChangeNotifier state singleton
-│   └── widgets/
-│       └── coin_icon.dart                 # Custom Diamond Coin widget
-├── pubspec.yaml                           # Dependencies and asset declarations
-└── README.md                              # Project documentation
+                      ┌─────────────────────────────────────────┐
+                      │             LinkUp Platform             │
+                      └────────────────────┬────────────────────┘
+                                           │
+         ┌─────────────────────────────────┼─────────────────────────────────┐
+         │                                 │                                 │
+         ▼                                 ▼                                 ▼
+┌──────────────────┐             ┌──────────────────┐             ┌──────────────────┐
+│  Flutter Client  │             │ Node.js Backend  │             │ Admin Dashboard  │
+│  (Android & Web) │◄──REST/WS──►│  (Express + TS)  │◄──REST API──│  (Vite + React)  │
+└────────┬─────────┘             └─────────┬────────┘             └──────────────────┘
+         │                                 │
+         │ P2P WebRTC HD Video             │ Prisma ORM
+         ▼                                 ▼
+┌──────────────────┐             ┌──────────────────┐
+│ Peer Device / Web│             │  PostgreSQL 18   │
+└──────────────────┘             └──────────────────┘
 ```
 
 ---
 
-## Getting Started
+## 📱 Features Completed & Operational
 
-### Prerequisites
-* Flutter SDK (3.19.0 or higher recommended)
-* Dart SDK (3.3.0 or higher)
-* Android Studio / Xcode with emulator or physical device
+### 1. 🎥 Real-Time WebRTC 1-on-1 HD Video & Audio Calling
+- **Zero-Delay Live Video & Audio**: Powered by `flutter_webrtc` with Cloudflare Anycast & Google STUN clusters for sub-100ms ultra-low latency streaming.
+- **Fullscreen Incoming Call Overlay**: Native-style full-screen animated incoming call dialog (`incoming_call_overlay.dart`) that pops up dynamically on the creator's device with Ringing sound, Caller Avatar, Rate/min, and Accept / Reject buttons.
+- **Dynamic Picture-in-Picture (PIP)**: Draggable, floating local camera self-preview with Front/Back camera switcher and camera mirror toggles.
+- **In-Call Controls**: Live mic mute/unmute, camera enable/disable, camera flip, and loudspeaker toggle.
+- **60-Second Real-Time Coin Billing Engine**: Automated server-side billing manager (`call-billing.manager.ts`) that runs ticks every 60 seconds, deducting coins from the caller's wallet and crediting the creator in real-time.
+- **Live In-Call Recharge**: If coin balance drops below 1 minute, a real-time warning banner displays with a one-click modal to recharge without disconnecting the active video call!
 
-### Installation
-1. Clone this repository:
+### 2. 💬 Real-Time 1-on-1 Chat & Messaging
+- Socket.io live messaging between users and creators.
+- Instant delivery, timestamped message bubbles, unread indicators, and message history persistence in PostgreSQL.
+
+### 3. 🔐 Enterprise Authentication & Dual Role Engine
+- **Fast2SMS Real SMS Gateway**: Instant 6-digit OTP delivery across India for phone number authentication.
+- **Email & Password Authentication**: Secured with bcrypt password hashing and 7-day signed JWT tokens.
+- **Dual Role Switching**: Seamlessly toggle between `USER` and `CREATOR` modes from the profile screen with a single tap.
+- **10-Step Interactive Profile Engine**: 100% profile completion gateway with photo galleries, lifestyle tags, relationship goals, and languages.
+
+### 4. 💎 Diamond Coin Economy & Wallet System
+- **Real-Time Wallet**: Live coin balance, recharge packages with promotional bonuses, and complete transaction ledger.
+- **Automated Commission Split**: 70% credited to creator, 30% platform revenue distribution on every completed call session.
+- **Payment Verification**: Mock & Razorpay payment integration with automated wallet credit callbacks.
+
+### 5. 👑 Creator Studio & Discovery Feed
+- **Live Creator Feed**: Categories (Trending, Top Rated, Live Now), multi-facet search filters (Age, Gender, Languages, Price range).
+- **Creator Studio Dashboard**: Live pricing configuration (Video call coins/min, Voice call coins/min), earnings analytics, followers count, and availability toggles (`isOnline`, `isAvailable`).
+
+### 6. 🛡️ PostgreSQL 18 & Prisma ORM Backend
+- Relational schema covering `User`, `UserProfile`, `Creator`, `Wallet`, `WalletTransaction`, `CallSession`, `ChatMessage`, and `AdminSetting`.
+- Global administrative killswitch controls (instant video disable, freeze balance, commission percentage override).
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend Mobile & Web** | Flutter 3.x, Dart 3.x, Google Fonts (`Plus Jakarta Sans`), `flutter_webrtc`, `socket_io_client`, `flutter_secure_storage` |
+| **Backend API & Signaling** | Node.js 18+, TypeScript, Express.js, Socket.io (WebSocket), Prisma ORM |
+| **Database** | PostgreSQL 18 (Local & Cloud compatible) |
+| **Video Engine** | WebRTC (Unified-Plan SDP, Cloudflare & Google STUN, IPv6 transport) |
+| **SMS Gateway** | Fast2SMS (Production Indian Telecom Route) |
+| **Admin Dashboard** | React, Vite, Tailwind CSS, Lucide Icons |
+
+---
+
+## 🚀 Quick Setup & Installation Guide
+
+### 1. Prerequisites
+- **Flutter SDK** (`>= 3.19.0`) -> [flutter.dev](https://flutter.dev)
+- **Node.js** (`>= 18.0.0`) -> [nodejs.org](https://nodejs.org)
+- **PostgreSQL 18** -> Running locally on port `5432`
+
+---
+
+### 2. Backend Setup (`version1/backend`)
+
+1. Open terminal and navigate to backend directory:
    ```bash
-   git clone https://github.com/freeelancerPK-07/Datingapp.git
-   cd Datingapp
+   cd version1/backend
    ```
 
-2. Install dependencies:
+2. Install Node dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Configure `.env` file (create `version1/backend/.env`):
+   ```env
+   PORT=5000
+   NODE_ENV=development
+   DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/linkup_db?schema=public"
+   JWT_SECRET="linkup_super_secret_jwt_key_2026_secured"
+   JWT_EXPIRES_IN="7d"
+   FAST2SMS_API_KEY="YOUR_FAST2SMS_KEY"
+   ```
+
+4. Push Prisma schema to PostgreSQL:
+   ```bash
+   npx prisma db push
+   ```
+
+5. Start the backend development server:
+   ```bash
+   npm run dev
+   ```
+   *Backend will run at: `http://localhost:5000` (LAN: `http://<YOUR_LOCAL_IP>:5000`)*
+
+---
+
+### 3. Flutter App Setup (`version1`)
+
+1. Open a new terminal in the `version1` folder:
+   ```bash
+   cd version1
+   ```
+
+2. Install Flutter packages:
    ```bash
    flutter pub get
    ```
 
-3. Run static analysis (Verify 0 errors):
+3. Launch on **Flutter Web**:
    ```bash
-   flutter analyze
+   flutter run -d chrome
    ```
 
-4. Launch the application:
-   ```bash
-   flutter run
-   ```
+4. Launch on **Android Physical Device**:
+   - Connect phone via USB with USB Debugging enabled.
+   - Run:
+     ```bash
+     flutter run -d <device_id>
+     ```
 
 ---
 
-## 📄 License
-This project is proprietary and developed for LinkUp. All rights reserved.
+### 4. Admin Dashboard Setup (`version1/admin-dashboard`)
+
+1. Navigate to admin dashboard directory:
+   ```bash
+   cd version1/admin-dashboard
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start Vite dev server:
+   ```bash
+   npm run dev
+   ```
+   *Dashboard will be available at: `http://localhost:5173`*
+
+---
+
+## 🌐 Network Configuration for Physical Device Video Calling
+
+For instantaneous, 0ms zero-delay WebRTC video calling between your laptop and physical Android device during development:
+
+1. **Option A (Wi-Fi Router / Mobile Hotspot):**
+   - Connect both your Laptop and your Android Phone to the **same Wi-Fi network** (or connect both to a third mobile's hotspot).
+   - Find your laptop's Wi-Fi IP using `ipconfig` (e.g. `192.168.1.15`).
+   - Ensure `lib/services/api_service.dart` has your laptop IP in `baseUrl`.
+
+2. **Option B (USB Reverse):**
+   - With your phone connected via USB:
+     ```bash
+     adb reverse tcp:5000 tcp:5000
+     ```
+   - Phone will access backend directly via `localhost:5000`!
+
+---
+
+## 📁 Repository Directory Structure
+
+```text
+version1/
+├── android/                    # Android native configuration & permissions
+├── assets/                     # Images, vectors, app icons & fonts
+├── backend/                    # Node.js + Express + TypeScript + Prisma Backend
+│   ├── prisma/
+│   │   └── schema.prisma       # Database models & relationships
+│   ├── src/
+│   │   ├── lib/                # Prisma client & utility helpers
+│   │   ├── routes/             # Auth, Call, Chat, Creator, Wallet REST APIs
+│   │   ├── services/           # Real-time Call Billing Manager & SMS Service
+│   │   └── server.ts           # Express app & Socket.io WebRTC signaling server
+│   └── package.json
+├── admin-dashboard/            # React + Vite + Tailwind Admin Panel
+├── lib/                        # Flutter Core Application
+│   ├── constants/              # Theme tokens & SVG asset definitions
+│   ├── models/                 # Strong Dart models (Creator, Wallet, Profile)
+│   ├── screens/                # 23 Production-grade screens
+│   │   ├── active_call_screen.dart    # WebRTC Video Call Screen with Live Controls
+│   │   ├── calling_screen.dart        # Dialing & Ringing Screen
+│   │   ├── home_screen.dart           # Creator discovery & feed
+│   │   ├── profile_self_screen.dart   # Profile & Creator toggle
+│   │   ├── wallet_screen.dart         # Coin wallet & recharge packages
+│   │   └── ...
+│   ├── services/               # StateNotifier & Engine layer
+│   │   ├── api_service.dart           # HTTP API client
+│   │   ├── app_state.dart             # Central reactive state singleton
+│   │   ├── navigation_service.dart    # Global context navigation key
+│   │   └── webrtc_service.dart        # Real-time WebRTC PeerConnection engine
+│   ├── widgets/                # Reusable UI widgets & Incoming Call Overlay
+│   └── main.dart               # App entrypoint & MaterialApp configuration
+├── pubspec.yaml                # Flutter dependencies
+└── README.md                   # Project documentation
+```
+
+---
+
+## 📄 License & Ownership
+Copyright © 2026 LinkUp. All rights reserved.
+Developed for LinkUp — Next-Generation Authentic Creator Connections.
