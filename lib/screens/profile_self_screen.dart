@@ -252,12 +252,11 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                 onTap: () async {
                   Navigator.pop(ctx);
                   final pickedPath = await AppImagePickerService.pickFromCamera();
-                  if (pickedPath != null) {
+                  if (pickedPath != null && mounted) {
                     appState.addGalleryPhoto(pickedPath);
                     if (appState.userProfile.photoUrl.isEmpty) {
                       appState.updateUserProfile(photoUrl: pickedPath);
                     }
-                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -289,12 +288,11 @@ class _ProfileSelfScreenState extends State<ProfileSelfScreen> {
                 onTap: () async {
                   Navigator.pop(ctx);
                   final pickedPath = await AppImagePickerService.pickFromGallery();
-                  if (pickedPath != null) {
+                  if (pickedPath != null && mounted) {
                     appState.addGalleryPhoto(pickedPath);
                     if (appState.userProfile.photoUrl.isEmpty) {
                       appState.updateUserProfile(photoUrl: pickedPath);
                     }
-                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(

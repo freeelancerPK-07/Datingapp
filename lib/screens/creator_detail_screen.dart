@@ -1,10 +1,10 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/constants/svg_assets.dart';
 import 'package:version1/models/creator_model.dart';
-import 'package:version1/screens/active_call_screen.dart';
+import 'package:version1/screens/calling_screen.dart';
 import 'package:version1/screens/chat_room_screen.dart';
 import 'package:version1/screens/recharge_packages_sheet.dart';
 import 'package:version1/services/app_state.dart';
@@ -1363,34 +1363,57 @@ class _BookingFlowModalState extends State<_BookingFlowModal>
     });
 
     // Step 6: Session starts after 1.2s
-    Timer(const Duration(milliseconds: 1200), () {
+    Timer(const Duration(milliseconds: 1200), () async {
       if (!mounted) return;
       Navigator.pop(context); // close bottom sheet
 
-      if (_selectedService.id == 'video_call') {
-        final durationSecs = (_selectedDuration?.minutes ?? 10) * 60;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ActiveCallScreen(
-              creator: widget.creator,
-              isVideoCall: true,
-              initialDurationSeconds: durationSecs,
-            ),
+      if (_selectedService.id == 'video_call' || _selectedService.id == 'voice_call') {
+        final isVideo = _selectedService.id == 'video_call';
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const Center(
+            child: CircularProgressIndicator(color: Color(0xFF007A78)),
           ),
         );
-      } else if (_selectedService.id == 'voice_call') {
-        final durationSecs = (_selectedDuration?.minutes ?? 15) * 60;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ActiveCallScreen(
-              creator: widget.creator,
-              isVideoCall: false,
-              initialDurationSeconds: durationSecs,
+
+        try {
+          final res = await AppState.instance.initiateCallToCreator(
+            creatorId: widget.creator.id,
+            callType: isVideo ? 'VIDEO' : 'VOICE',
+          );
+          if (!mounted) return;
+          Navigator.pop(context); // dismiss loader
+
+          if (res['success'] == true && res['callId'] != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CallingScreen(
+                  creator: widget.creator,
+                  isVideoCall: isVideo,
+                  callId: res['callId'] as String,
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(res['error'] ?? 'Could not start call'),
+                backgroundColor: const Color(0xFFEF4444),
+              ),
+            );
+          }
+        } catch (e) {
+          if (!mounted) return;
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Call failed: $e'),
+              backgroundColor: const Color(0xFFEF4444),
             ),
-          ),
-        );
+          );
+        }
       } else {
         // Photo or Video Greeting -> Chat delivery room with settlement
         AppState.instance.completeBookingSettlement(

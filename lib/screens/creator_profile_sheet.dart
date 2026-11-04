@@ -1,9 +1,9 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/constants/svg_assets.dart';
 import 'package:version1/models/creator_model.dart';
-import 'package:version1/screens/active_call_screen.dart';
+import 'package:version1/screens/calling_screen.dart';
 import 'package:version1/screens/chat_room_screen.dart';
 import 'package:version1/screens/creator_detail_screen.dart';
 import 'package:version1/screens/recharge_packages_sheet.dart';
@@ -44,7 +44,7 @@ class _CreatorProfileSheetState extends State<CreatorProfileSheet> {
     );
   }
 
-  void _handleVideoCall() {
+  void _handleVideoCall() async {
     final appState = AppState.instance;
     final check = appState.canStartVideoCall(widget.creator);
 
@@ -119,17 +119,47 @@ class _CreatorProfileSheetState extends State<CreatorProfileSheet> {
       return;
     }
 
-    // Launch active video call screen
+    // Launch real-time call flow via CallingScreen
     Navigator.of(context).pop();
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ActiveCallScreen(
-          creator: widget.creator,
-          isVideoCall: true,
-        ),
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF007A78)),
       ),
     );
+
+    try {
+      final res = await AppState.instance.initiateCallToCreator(
+        creatorId: widget.creator.id,
+        callType: 'VIDEO',
+      );
+      if (mounted) Navigator.pop(context);
+
+      if (res['success'] == true && res['callId'] != null) {
+        final callId = res['callId'] as String;
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CallingScreen(
+              creator: widget.creator,
+              isVideoCall: true,
+              callId: callId,
+            ),
+          ),
+        );
+      } else {
+        final err = res['error'] ?? 'Could not initiate call.';
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err), backgroundColor: const Color(0xFFEF4444)),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+    }
   }
 
   @override

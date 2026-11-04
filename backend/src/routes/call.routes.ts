@@ -100,6 +100,166 @@ callRouter.post('/initiate', async (req, res) => {
 });
 
 /**
+ * GET /api/v1/calls/incoming
+ * Poll for pending incoming calls for a creator
+ */
+callRouter.get('/incoming', async (req, res) => {
+  try {
+    const { userId, creatorId } = req.query;
+    if (!userId && !creatorId) {
+      return res.status(400).json({ success: false, error: 'userId or creatorId is required' });
+    }
+
+    let creator = null;
+    if (creatorId) {
+      creator = await prisma.creator.findUnique({ where: { id: String(creatorId) } });
+    } else if (userId) {
+      creator = await prisma.creator.findUnique({ where: { userId: String(userId) } });
+    }
+
+    if (!creator) {
+      return res.json({ success: true, incomingCall: null });
+    }
+
+    const cutoff = new Date(Date.now() - 45 * 1000);
+    const call = await prisma.callSession.findFirst({
+      where: {
+        creatorId: creator.id,
+        status: { in: ['INITIATED', 'RINGING'] },
+        createdAt: { gte: cutoff },
+      },
+      include: {
+        caller: { include: { profile: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!call) {
+      return res.json({ success: true, incomingCall: null });
+    }
+
+    return res.json({
+      success: true,
+      incomingCall: {
+        callId: call.id,
+        callType: call.callType,
+        ratePerMin: call.ratePerMin,
+        agoraChannel: call.agoraChannel,
+        createdAt: call.createdAt,
+        caller: {
+          id: call.callerId,
+          name: call.caller.profile?.name || 'LinkUp User',
+          photoUrl: call.caller.profile?.avatarUrl || '',
+        },
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/calls/:id/status
+ * Real-time call status poll for caller & creator
+ */
+callRouter.get('/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const call = await prisma.callSession.findUnique({
+      where: { id },
+      include: {
+        caller: { include: { profile: true } },
+        creator: { include: { user: { include: { profile: true } } } },
+      },
+    });
+
+    if (!call) {
+      return res.status(404).json({ success: false, error: 'Call session not found' });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        id: call.id,
+        status: call.status,
+        startedAt: call.startedAt,
+        durationSecs: call.durationSecs,
+        agoraChannel: call.agoraChannel,
+        ratePerMin: call.ratePerMin,
+        caller: {
+          id: call.callerId,
+          name: call.caller.profile?.name || 'User',
+          photoUrl: call.caller.profile?.avatarUrl || '',
+        },
+        creator: {
+          id: call.creatorId,
+          userId: call.creator.userId,
+          name: call.creator.user.profile?.name || 'Creator',
+          photoUrl: call.creator.user.profile?.avatarUrl || '',
+        },
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/calls/:id/accept
+ * Creator accepts incoming call
+ */
+callRouter.post('/:id/accept', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const call = await prisma.callSession.findUnique({ where: { id } });
+
+    if (!call) {
+      return res.status(404).json({ success: false, error: 'Call not found' });
+    }
+
+    if (call.status !== 'INITIATED' && call.status !== 'RINGING') {
+      return res.status(400).json({ success: false, error: `Call cannot be accepted in status ${call.status}` });
+    }
+
+    const updated = await prisma.callSession.update({
+      where: { id },
+      data: {
+        status: 'CONNECTED',
+        startedAt: new Date(),
+      },
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/calls/:id/reject
+ * Creator rejects incoming call or caller cancels
+ */
+callRouter.post('/:id/reject', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason = 'CREATOR_DECLINED' } = req.body;
+
+    const updated = await prisma.callSession.update({
+      where: { id },
+      data: {
+        status: 'REJECTED',
+        endedAt: new Date(),
+        endReason: reason,
+      },
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * POST /api/v1/calls/:id/end
  * Clean call settlement (atomic coin deduction & creator split)
  */

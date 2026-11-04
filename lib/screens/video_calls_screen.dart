@@ -54,7 +54,7 @@ class _VideoCallsScreenState extends State<VideoCallsScreen> {
   // -------------------------------------------------------------
   // Video Call Initiation Flow (PRD Section 5 & 7)
   // -------------------------------------------------------------
-  void _initiateVideoCall(CreatorModel creator) {
+  void _initiateVideoCall(CreatorModel creator) async {
     final appState = AppState.instance;
 
     // 1. Availability validation
@@ -79,16 +79,56 @@ class _VideoCallsScreenState extends State<VideoCallsScreen> {
       return;
     }
 
-    // 3. Navigate to Outgoing Call Screen (CallingScreen)
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => CallingScreen(
-          creator: creator,
-          isVideoCall: true,
-        ),
+    // 3. Initiate Real-time Call Session via Backend
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF007A78)),
       ),
     );
+
+    try {
+      final res = await appState.initiateCallToCreator(
+        creatorId: creator.id,
+        callType: 'VIDEO',
+      );
+
+      if (mounted) Navigator.pop(context); // Dismiss loading dialog
+
+      if (res['success'] == true && res['callId'] != null) {
+        final callId = res['callId'] as String;
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CallingScreen(
+              creator: creator,
+              isVideoCall: true,
+              callId: callId,
+            ),
+          ),
+        );
+      } else {
+        final err = res['error'] ?? 'Unable to connect call. Please try again.';
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(err),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to connect: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+    }
   }
 
   void _showInsufficientBalanceSheet(CreatorModel creator, int requiredCoins) {

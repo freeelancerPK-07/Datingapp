@@ -1,18 +1,21 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/models/call_record_model.dart';
 import 'package:version1/models/creator_model.dart';
 import 'package:version1/screens/active_call_screen.dart';
+import 'package:version1/services/api_service.dart';
 import 'package:version1/services/app_state.dart';
 
 class CallingScreen extends StatefulWidget {
   final CreatorModel creator;
   final bool isVideoCall;
+  final String callId;
 
   const CallingScreen({
     super.key,
     required this.creator,
+    required this.callId,
     this.isVideoCall = true,
   });
 
@@ -24,7 +27,7 @@ class _CallingScreenState extends State<CallingScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
-  Timer? _connectTimer;
+  Timer? _statusPollTimer;
   String _statusText = 'Calling...';
   bool _isMuted = false;
   bool _isSpeaker = true;
@@ -41,36 +44,68 @@ class _CallingScreenState extends State<CallingScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // Phase 1: Calling (0 - 1.5s) -> Phase 2: Ringing (1.5s - 3.5s) -> Phase 3: Connected!
-    Timer(const Duration(milliseconds: 1500), () {
+    // Phase 1: Calling (0 - 300ms) -> Phase 2: Ringing
+    Timer(const Duration(milliseconds: 300), () {
       if (mounted) {
         setState(() => _statusText = 'Ringing...');
       }
     });
 
-    _connectTimer = Timer(const Duration(milliseconds: 3500), () {
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ActiveCallScreen(
-            creator: widget.creator,
-            isVideoCall: widget.isVideoCall,
-          ),
-        ),
-      );
+    // Real-time status poll every 300ms: when creator accepts, transitions to ActiveCallScreen instantly
+    _statusPollTimer = Timer.periodic(const Duration(milliseconds: 300), (timer) async {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      try {
+        final res = await ApiService.instance.getCallStatus(widget.callId);
+        if (res['success'] == true && res['data'] != null) {
+          final status = res['data']['status'] as String?;
+          if (status == 'CONNECTED') {
+            timer.cancel();
+            if (!mounted) return;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ActiveCallScreen(
+                  creator: widget.creator,
+                  isVideoCall: widget.isVideoCall,
+                  callId: widget.callId,
+                  isCaller: true,
+                ),
+              ),
+            );
+          } else if (status == 'REJECTED' || status == 'ENDED' || status == 'COMPLETED') {
+            timer.cancel();
+            if (!mounted) return;
+            setState(() => _statusText = 'Call Declined');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${widget.creator.name} declined or missed the call.',
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+                ),
+                backgroundColor: const Color(0xFFEF4444),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+            Navigator.pop(context);
+          }
+        }
+      } catch (_) {}
     });
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
-    _connectTimer?.cancel();
+    _statusPollTimer?.cancel();
     super.dispose();
   }
 
   void _cancelCall() {
-    _connectTimer?.cancel();
+    _statusPollTimer?.cancel();
+    ApiService.instance.rejectCall(widget.callId, reason: 'USER_CANCELLED');
 
     // Record cancelled/declined call in Call History
     AppState.instance.addCallRecord(
@@ -112,11 +147,14 @@ class _CallingScreenState extends State<CallingScreen>
         fit: StackFit.expand,
         children: [
           // Background photo with heavy dark blur
-          Image.network(
-            creator.photoUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFF0F172A)),
-          ),
+          if (creator.photoUrl.isNotEmpty && !creator.photoUrl.startsWith('blob:') && creator.photoUrl.startsWith('http'))
+            Image.network(
+              creator.photoUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFF0F172A)),
+            )
+          else
+            Container(color: const Color(0xFF0F172A)),
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -201,14 +239,21 @@ class _CallingScreenState extends State<CallingScreen>
                               ],
                             ),
                             child: ClipOval(
-                              child: Image.network(
-                                creator.photoUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => Container(
-                                  color: const Color(0xFF1E293B),
-                                  child: const Icon(Icons.person, color: Colors.white54, size: 50),
-                                ),
-                              ),
+                              child: (creator.photoUrl.isNotEmpty &&
+                                      !creator.photoUrl.startsWith('blob:') &&
+                                      creator.photoUrl.startsWith('http'))
+                                  ? Image.network(
+                                      creator.photoUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Container(
+                                        color: const Color(0xFF1E293B),
+                                        child: const Icon(Icons.person, color: Colors.white54, size: 50),
+                                      ),
+                                    )
+                                  : Container(
+                                      color: const Color(0xFF1E293B),
+                                      child: const Icon(Icons.person, color: Colors.white54, size: 50),
+                                    ),
                             ),
                           ),
                         ],

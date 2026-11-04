@@ -1,8 +1,8 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/models/creator_model.dart';
-import 'package:version1/screens/active_call_screen.dart';
+import 'package:version1/screens/calling_screen.dart';
 import 'package:version1/screens/recharge_packages_sheet.dart';
 import 'package:version1/services/app_state.dart';
 
@@ -110,7 +110,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
   }
 
-  void _startCall({required bool isVideo}) {
+  void _startCall({required bool isVideo}) async {
     final appState = AppState.instance;
     final check = appState.canStartVideoCall(widget.creator);
 
@@ -168,15 +168,51 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ActiveCallScreen(
-          creator: widget.creator,
-          isVideoCall: isVideo,
-        ),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF007A78)),
       ),
     );
+
+    try {
+      final res = await AppState.instance.initiateCallToCreator(
+        creatorId: widget.creator.id,
+        callType: isVideo ? 'VIDEO' : 'VOICE',
+      );
+      if (!mounted) return;
+      Navigator.pop(context); // close loader
+
+      if (res['success'] == true && res['callId'] != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CallingScreen(
+              creator: widget.creator,
+              isVideoCall: isVideo,
+              callId: res['callId'] as String,
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['error'] ?? 'Could not start call'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Call failed: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+    }
   }
 
   @override

@@ -1,10 +1,13 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/models/call_record_model.dart';
 import 'package:version1/models/creator_model.dart';
 import 'package:version1/screens/recharge_packages_sheet.dart';
+import 'package:version1/services/api_service.dart';
 import 'package:version1/services/app_state.dart';
+import 'package:version1/services/webrtc_service.dart';
 import 'package:version1/widgets/coin_icon.dart';
 
 enum NetworkQuality { strong, fair, weak }
@@ -13,12 +16,16 @@ class ActiveCallScreen extends StatefulWidget {
   final CreatorModel creator;
   final bool isVideoCall;
   final int initialDurationSeconds;
+  final String? callId;
+  final bool isCaller;
 
   const ActiveCallScreen({
     super.key,
     required this.creator,
     this.isVideoCall = true,
     this.initialDurationSeconds = 600, // 10 minutes default
+    this.callId,
+    this.isCaller = true,
   });
 
   @override
@@ -32,6 +39,8 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
   int _diamondsUsed = 0;
   late Timer _callCountdownTimer;
   late Timer _diamondDeductionTimer;
+  Timer? _remoteStatusPollTimer;
+  WebRTCService? _webrtc;
 
   // Call Controls State
   bool _isMuted = false;
@@ -56,12 +65,41 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
     super.initState();
     _isVideoEnabled = widget.isVideoCall;
     _secondsRemaining = widget.initialDurationSeconds;
-    _diamondsUsed = widget.creator.diamondsPerMin; // First minute charged upon connection
+    if (widget.isCaller) {
+      _diamondsUsed = widget.creator.diamondsPerMin; // First minute charged upon connection
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        AppState.instance.deductDiamonds(widget.creator.diamondsPerMin, widget.creator.name);
+      });
+    }
 
-    // Deduct initial 1 minute rate
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      AppState.instance.deductDiamonds(widget.creator.diamondsPerMin, widget.creator.name);
-    });
+    // Initialize WebRTC live camera & microphone
+    if (widget.isVideoCall && widget.callId != null) {
+      _webrtc = WebRTCService(callId: widget.callId!, isCaller: widget.isCaller);
+      _webrtc!.addListener(() {
+        if (mounted) setState(() {});
+      });
+      _webrtc!.initialize();
+    }
+
+    // Live remote status poll (every 2s): ensures when one party hangs up, both screens end cleanly
+    if (widget.callId != null) {
+      _remoteStatusPollTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        try {
+          final res = await ApiService.instance.getCallStatus(widget.callId!);
+          if (res['success'] == true && res['data'] != null) {
+            final st = res['data']['status'] as String?;
+            if (st == 'COMPLETED' || st == 'ENDED' || st == 'REJECTED') {
+              timer.cancel();
+              _handleEndCall(fromRemote: true);
+            }
+          }
+        } catch (_) {}
+      });
+    }
 
     // Countdown and Elapsed Timer
     _callCountdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -87,20 +125,25 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
       }
     });
 
-    // Diamond deduction every 60 seconds (Live per-minute deduction)
+    // Diamond deduction every 60 seconds (Live per-minute deduction for caller)
     _diamondDeductionTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
       }
-      final appState = AppState.instance;
-
-      if (appState.diamondBalance < widget.creator.diamondsPerMin) {
-        // Auto-end call when balance is insufficient for next minute
-        timer.cancel();
-        _handleEndCall(isAutoEnd: true);
+      if (widget.isCaller) {
+        final appState = AppState.instance;
+        if (appState.diamondBalance < widget.creator.diamondsPerMin) {
+          // Auto-end call when balance is insufficient for next minute
+          timer.cancel();
+          _handleEndCall(isAutoEnd: true);
+        } else {
+          appState.deductDiamonds(widget.creator.diamondsPerMin, widget.creator.name);
+          setState(() {
+            _diamondsUsed += widget.creator.diamondsPerMin;
+          });
+        }
       } else {
-        appState.deductDiamonds(widget.creator.diamondsPerMin, widget.creator.name);
         setState(() {
           _diamondsUsed += widget.creator.diamondsPerMin;
         });
@@ -124,6 +167,8 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
 
   @override
   void dispose() {
+    _webrtc?.dispose();
+    _remoteStatusPollTimer?.cancel();
     _callCountdownTimer.cancel();
     _diamondDeductionTimer.cancel();
     _pulseController.dispose();
@@ -136,9 +181,19 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
     return '$mins:$secs';
   }
 
-  void _handleEndCall({bool isTimeout = false, bool isAutoEnd = false}) {
+  void _handleEndCall({bool isTimeout = false, bool isAutoEnd = false, bool fromRemote = false}) {
+    _remoteStatusPollTimer?.cancel();
     _callCountdownTimer.cancel();
     _diamondDeductionTimer.cancel();
+
+    // Notify backend
+    if (!fromRemote && widget.callId != null) {
+      ApiService.instance.endCall(
+        callId: widget.callId!,
+        durationSeconds: _elapsedSeconds,
+        reason: isAutoEnd ? 'INSUFFICIENT_BALANCE' : (isTimeout ? 'CALL_TIMEOUT' : 'USER_HANGUP'),
+      );
+    }
 
     // Persist completed call record to AppState Call History
     AppState.instance.addCallRecord(
@@ -168,6 +223,23 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
           duration: const Duration(seconds: 3),
         ),
       );
+    } else if (fromRemote && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Call ended by ${widget.creator.name}.',
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: const Color(0xFF1F2937),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+
+    if (!widget.isCaller) {
+      // Creator side simply exits call
+      if (mounted) Navigator.of(context).pop();
+      return;
     }
 
     showModalBottomSheet(
@@ -199,16 +271,54 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
           // 1. Background Video / Audio Feed
           Positioned.fill(
             child: _isVideoEnabled
-                ? Image.network(
-                    widget.creator.photoUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: const Color(0xFF1A1A24),
-                      child: const Center(
-                        child: Icon(Icons.videocam_off_rounded, color: Colors.white54, size: 48),
-                      ),
-                    ),
-                  )
+                ? (_webrtc != null && _webrtc!.remoteRenderer.srcObject != null
+                    ? RTCVideoView(
+                        _webrtc!.remoteRenderer,
+                        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                      )
+                    : Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (widget.creator.photoUrl.isNotEmpty &&
+                              !widget.creator.photoUrl.startsWith('blob:') &&
+                              widget.creator.photoUrl.startsWith('http'))
+                            Image.network(
+                              widget.creator.photoUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                color: const Color(0xFF1A1A24),
+                                child: const Center(
+                                  child: Icon(Icons.videocam_off_rounded, color: Colors.white54, size: 48),
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              color: const Color(0xFF1A1A24),
+                              child: const Center(
+                                child: Icon(Icons.person, color: Colors.white54, size: 64),
+                              ),
+                            ),
+                          Container(color: Colors.black.withValues(alpha: 0.5)),
+                          Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const CircularProgressIndicator(color: Color(0xFF007A78)),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Connecting Live Camera...',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ))
                 : Container(
                     decoration: const BoxDecoration(
                       gradient: RadialGradient(
@@ -239,7 +349,17 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                                   ),
                                   CircleAvatar(
                                     radius: 60,
-                                    backgroundImage: NetworkImage(widget.creator.photoUrl),
+                                    backgroundColor: const Color(0xFF1E293B),
+                                    backgroundImage: (widget.creator.photoUrl.isNotEmpty &&
+                                            !widget.creator.photoUrl.startsWith('blob:') &&
+                                            widget.creator.photoUrl.startsWith('http'))
+                                        ? NetworkImage(widget.creator.photoUrl)
+                                        : null,
+                                    child: (widget.creator.photoUrl.isEmpty ||
+                                            widget.creator.photoUrl.startsWith('blob:') ||
+                                            !widget.creator.photoUrl.startsWith('http'))
+                                        ? const Icon(Icons.person, color: Colors.white, size: 50)
+                                        : null,
                                   ),
                                 ],
                               );
@@ -293,7 +413,17 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                       // Creator Avatar
                       CircleAvatar(
                         radius: 20,
-                        backgroundImage: NetworkImage(widget.creator.photoUrl),
+                        backgroundColor: const Color(0xFF1E293B),
+                        backgroundImage: (widget.creator.photoUrl.isNotEmpty &&
+                                !widget.creator.photoUrl.startsWith('blob:') &&
+                                widget.creator.photoUrl.startsWith('http'))
+                            ? NetworkImage(widget.creator.photoUrl)
+                            : null,
+                        child: (widget.creator.photoUrl.isEmpty ||
+                                widget.creator.photoUrl.startsWith('blob:') ||
+                                !widget.creator.photoUrl.startsWith('http'))
+                            ? const Icon(Icons.person, color: Colors.white70, size: 20)
+                            : null,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -494,12 +624,19 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        Container(
-                          color: const Color(0xFF1E293B),
-                          child: const Center(
-                            child: Icon(Icons.person, color: Colors.white54, size: 40),
+                        if (_webrtc != null && _webrtc!.localRenderer.srcObject != null)
+                          RTCVideoView(
+                            _webrtc!.localRenderer,
+                            mirror: _isFrontCamera,
+                            objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                          )
+                        else
+                          Container(
+                            color: const Color(0xFF1E293B),
+                            child: const Center(
+                              child: Icon(Icons.person, color: Colors.white54, size: 40),
+                            ),
                           ),
-                        ),
                         Positioned(
                           bottom: 6,
                           left: 6,
@@ -551,7 +688,10 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                     icon: _isMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
                     label: _isMuted ? 'Unmute' : 'Mute',
                     isActive: _isMuted,
-                    onTap: () => setState(() => _isMuted = !_isMuted),
+                    onTap: () {
+                      setState(() => _isMuted = !_isMuted);
+                      _webrtc?.toggleMute();
+                    },
                   ),
 
                   // Toggle Video
@@ -559,7 +699,10 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                     icon: _isVideoEnabled ? Icons.videocam_rounded : Icons.videocam_off_rounded,
                     label: _isVideoEnabled ? 'Stop Video' : 'Start Video',
                     isActive: !_isVideoEnabled,
-                    onTap: () => setState(() => _isVideoEnabled = !_isVideoEnabled),
+                    onTap: () {
+                      setState(() => _isVideoEnabled = !_isVideoEnabled);
+                      _webrtc?.toggleVideo();
+                    },
                   ),
 
                   // Flip Camera
@@ -568,7 +711,10 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                       icon: Icons.flip_camera_ios_rounded,
                       label: 'Flip',
                       isActive: false,
-                      onTap: () => setState(() => _isFrontCamera = !_isFrontCamera),
+                      onTap: () {
+                        setState(() => _isFrontCamera = !_isFrontCamera);
+                        _webrtc?.switchCamera();
+                      },
                     ),
 
                   // Speaker Toggle

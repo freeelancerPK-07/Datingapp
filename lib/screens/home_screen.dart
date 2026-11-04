@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/constants/app_icon_base64.dart';
 import 'package:version1/constants/svg_assets.dart';
 import 'package:version1/models/creator_model.dart';
-import 'package:version1/screens/active_call_screen.dart';
 import 'package:version1/screens/become_creator_screen.dart';
 import 'package:version1/screens/creator_detail_screen.dart';
 import 'package:version1/screens/creator_profile_sheet.dart';
@@ -1471,21 +1470,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 GestureDetector(
                   key: const ValueKey('video_call_btn'),
                   onTap: () {
-                    final appState = AppState.instance;
-                    final check = appState.canStartVideoCall(creatorModel);
-                    if (!check.isAllowed) {
-                      CreatorProfileSheet.show(context, creatorModel);
-                      return;
-                    }
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ActiveCallScreen(
-                          creator: creatorModel,
-                          isVideoCall: true,
-                        ),
-                      ),
-                    );
+                    CreatorProfileSheet.show(context, creatorModel);
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

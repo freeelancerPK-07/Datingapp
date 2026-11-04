@@ -255,6 +255,60 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> checkIncomingCall({String? userId, String? creatorId}) async {
+    try {
+      final query = userId != null ? 'userId=$userId' : 'creatorId=$creatorId';
+      final res = await http.get(
+        Uri.parse('$baseUrl/calls/incoming?$query'),
+        headers: _headers,
+      );
+      return jsonDecode(res.body);
+    } catch (e) {
+      debugPrint('[ApiService] Check incoming call error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> getCallStatus(String callId) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/calls/$callId/status'),
+        headers: _headers,
+      );
+      return jsonDecode(res.body);
+    } catch (e) {
+      debugPrint('[ApiService] Get call status error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> acceptCall(String callId) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/calls/$callId/accept'),
+        headers: _headers,
+      );
+      return jsonDecode(res.body);
+    } catch (e) {
+      debugPrint('[ApiService] Accept call error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> rejectCall(String callId, {String reason = 'CREATOR_DECLINED'}) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/calls/$callId/reject'),
+        headers: _headers,
+        body: jsonEncode({'reason': reason}),
+      );
+      return jsonDecode(res.body);
+    } catch (e) {
+      debugPrint('[ApiService] Reject call error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> endCall({
     required String callId,
     required int durationSeconds,

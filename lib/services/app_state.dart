@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:version1/models/admin_settings_model.dart';
@@ -25,6 +26,7 @@ class AppState extends ChangeNotifier {
   AppState._internal() {
     _initSampleCreators();
     syncCreatorsFromBackend();
+    startIncomingCallListener();
   }
 
   static const FlutterSecureStorage _storage = FlutterSecureStorage(
@@ -36,9 +38,58 @@ class AppState extends ChangeNotifier {
   String? _backendUserId;
   String? get backendUserId => _backendUserId;
 
+  // Real-time Incoming Call State
+  Map<String, dynamic>? _incomingCall;
+  Map<String, dynamic>? get incomingCall => _incomingCall;
+  Timer? _incomingCallPollTimer;
+
+  void startIncomingCallListener() {
+    _incomingCallPollTimer?.cancel();
+    _incomingCallPollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      final uid = _backendUserId;
+      if (uid == null) return;
+      try {
+        final res = await ApiService.instance.checkIncomingCall(userId: uid);
+        if (res['success'] == true) {
+          final inc = res['incomingCall'];
+          if (inc != null) {
+            if (_incomingCall == null || _incomingCall!['callId'] != inc['callId']) {
+              _incomingCall = Map<String, dynamic>.from(inc);
+              notifyListeners();
+            }
+          } else if (_incomingCall != null) {
+            _incomingCall = null;
+            notifyListeners();
+          }
+        }
+      } catch (_) {}
+    });
+  }
+
+  void dismissIncomingCall() {
+    _incomingCall = null;
+    notifyListeners();
+  }
+
+  Future<Map<String, dynamic>> initiateCallToCreator({
+    required String creatorId,
+    String callType = 'VIDEO',
+  }) async {
+    final uid = _backendUserId;
+    if (uid == null || uid.isEmpty) {
+      return {'success': false, 'error': 'Please login first'};
+    }
+    return await ApiService.instance.initiateCall(
+      callerId: uid,
+      creatorId: creatorId,
+      callType: callType,
+    );
+  }
+
   void setBackendUserId(String id) {
     _backendUserId = id;
     syncWalletFromBackend();
+    startIncomingCallListener();
   }
 
   Future<void> saveUserSession({
@@ -53,6 +104,7 @@ class AppState extends ChangeNotifier {
     _backendUserId = userId;
     setProfileCompleted(isProfileCompleted);
     ApiService.instance.setAuthToken(token);
+    startIncomingCallListener();
     if (name != null && name.isNotEmpty) _userName = name;
     if (phone != null && phone.isNotEmpty) _userPhone = phone;
     if (profile != null) restoreUserProfileFromDb(profile);

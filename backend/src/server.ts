@@ -94,10 +94,14 @@ io.on('connection', (socket) => {
     console.log(`[Socket] User ${userId} joined room user_${userId}`);
   });
 
-  // Join Call Room (for live call events & billing ticks)
+  // Join Call Room (for live call events & billing ticks & WebRTC)
   socket.on('call:join', (callId: string) => {
     socket.join(`call_${callId}`);
-    console.log(`[Socket] ${socket.id} joined call room call_${callId}`);
+    const room = io.sockets.adapter.rooms.get(`call_${callId}`);
+    const count = room ? room.size : 1;
+    console.log(`[Socket] ${socket.id} joined call room call_${callId}. Total peers: ${count}`);
+    // Notify the other peer in this room that a peer is ready
+    socket.to(`call_${callId}`).emit('call:peer-ready', { callId, socketId: socket.id, peerCount: count });
   });
 
   // Call Signaling: Invite
@@ -124,6 +128,30 @@ io.on('connection', (socket) => {
   socket.on('call:end', async (data: { callId: string; reason?: string }) => {
     console.log(`[Socket Call End]: Call ${data.callId} ended by client`);
     await callBillingManager.endCall(data.callId, data.reason || 'USER_HANGUP', io);
+  });
+
+  // WebRTC Signaling: SDP Offer
+  socket.on('webrtc:offer', (data: { callId: string; sdp: any }) => {
+    console.log(`[WebRTC] SDP Offer relayed in call_${data.callId} from ${socket.id}`);
+    socket.to(`call_${data.callId}`).emit('webrtc:offer', data);
+  });
+
+  // WebRTC Signaling: SDP Answer
+  socket.on('webrtc:answer', (data: { callId: string; sdp: any }) => {
+    console.log(`[WebRTC] SDP Answer relayed in call_${data.callId} from ${socket.id}`);
+    socket.to(`call_${data.callId}`).emit('webrtc:answer', data);
+  });
+
+  // WebRTC Signaling: Peer Ready Ping
+  socket.on('webrtc:ready', (data: { callId: string }) => {
+    console.log(`[WebRTC] Peer Ready ping in call_${data.callId} from ${socket.id}`);
+    socket.to(`call_${data.callId}`).emit('webrtc:ready', data);
+  });
+
+  // WebRTC Signaling: ICE Candidate
+  socket.on('webrtc:ice-candidate', (data: { callId: string; candidate: any }) => {
+    console.log(`[WebRTC] ICE candidate in call_${data.callId} from ${socket.id}: ${data.candidate?.candidate?.substring(0, 40)}...`);
+    socket.to(`call_${data.callId}`).emit('webrtc:ice-candidate', data);
   });
 
   socket.on('disconnect', () => {
