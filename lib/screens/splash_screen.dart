@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:version1/screens/home_screen.dart';
+import 'package:version1/screens/no_internet_screen.dart';
 import 'package:version1/screens/profile_setup_screen.dart';
 import 'package:version1/screens/welcome_screen.dart';
 import 'package:version1/services/api_service.dart';
@@ -61,6 +62,23 @@ class _SplashScreenState extends State<SplashScreen>
     _navigationTimer?.cancel();
     if (!mounted || _navigated) return;
     _navigated = true;
+
+    // Check device internet connectivity
+    final isOnline = await NoInternetScreen.hasInternet();
+    if (!isOnline) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, animation, __) => const NoInternetScreen(
+            targetScreen: WelcomeScreen(),
+          ),
+          transitionsBuilder: (_, animation, __, child) =>
+              FadeTransition(opacity: animation, child: child),
+          transitionDuration: const Duration(milliseconds: 350),
+        ),
+      );
+      return;
+    }
 
     try {
       await ApiService.instance.probeBackendUrl();

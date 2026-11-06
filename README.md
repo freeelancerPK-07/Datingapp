@@ -1,4 +1,4 @@
-# 🚀 LinkUp — Real-Time 1-on-1 Creator Video Consultation & Discovery Platform
+# LinkUp — Real-Time 1-on-1 Creator Video Consultation & Discovery Platform
 
 **LinkUp** is an enterprise-grade, full-stack real-time platform engineered for private 1-on-1 HD video calling, creator discovery, instant messaging, and a diamond coin wallet economy.
 
@@ -6,7 +6,7 @@ Built with **Flutter (Mobile & Web)**, a **Node.js + Express + TypeScript** real
 
 ---
 
-## 🌟 Architecture Overview
+## Architecture Overview
 
 ```
                       ┌─────────────────────────────────────────┐
