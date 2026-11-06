@@ -93,8 +93,8 @@ class _NoInternetScreenState extends State<NoInternetScreen>
       final nextScreen = widget.targetScreen ?? const WelcomeScreen();
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (_, animation, __) => nextScreen,
-          transitionsBuilder: (_, animation, __, child) => FadeTransition(
+          pageBuilder: (context, animation, secondaryAnimation) => nextScreen,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) => FadeTransition(
             opacity: animation,
             child: child,
           ),
@@ -318,3 +318,4 @@ class _NoInternetScreenState extends State<NoInternetScreen>
     );
   }
 }
+
