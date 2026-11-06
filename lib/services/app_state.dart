@@ -814,7 +814,15 @@ class AppState extends ChangeNotifier {
     double creatorSharePercent = 0.70, // 70% Creator, 30% Platform
   }) {
     final coinAmount = amount.round();
-    _lockedCoins = (_lockedCoins - coinAmount).clamp(0, 99999999);
+
+    // Release any unused escrow locked coins back to available coins
+    if (_lockedCoins > 0) {
+      final refundRemainder = (_lockedCoins - coinAmount).clamp(0, 99999999);
+      _lockedCoins = 0;
+      if (refundRemainder > 0) {
+        _availableCoins += refundRemainder;
+      }
+    }
 
     final creatorPayout = amount * creatorSharePercent;
     final platformCommission = amount * (1.0 - creatorSharePercent);
@@ -824,7 +832,7 @@ class AppState extends ChangeNotifier {
       0,
       WalletTransaction(
         id: 'SETTLED-${DateTime.now().millisecondsSinceEpoch}',
-        description: 'Completed – $serviceName',
+        description: 'Completed – $serviceName ($coinAmount Coins)',
         coins: coinAmount,
         amountInr: amount,
         isCredit: false,

@@ -54,10 +54,7 @@ class _VideoCallsScreenState extends State<VideoCallsScreen> {
   // -------------------------------------------------------------
   // Video Call Initiation Flow (PRD Section 5 & 7)
   // -------------------------------------------------------------
-  void _initiateVideoCall(CreatorModel creator) async {
-    final appState = AppState.instance;
-
-    // 1. Availability validation
+  void _initiateVideoCall(CreatorModel creator) {
     if (!creator.isOnline) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -71,15 +68,193 @@ class _VideoCallsScreenState extends State<VideoCallsScreen> {
       );
       return;
     }
+    _showDurationSelectionSheet(creator);
+  }
 
-    // 2. Wallet Balance Check (LinkUp Coins)
-    const int requiredCoins = 500; // 10 minutes HD session
-    if (appState.availableCoins < requiredCoins) {
-      _showInsufficientBalanceSheet(creator, requiredCoins);
-      return;
-    }
+  void _showDurationSelectionSheet(CreatorModel creator) {
+    int selectedMinutes = 5;
+    final ratePerMin = creator.diamondsPerMin > 0 ? creator.diamondsPerMin : 50;
 
-    // 3. Initiate Real-time Call Session via Backend
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final requiredCoins = ratePerMin * selectedMinutes;
+          final balance = AppState.instance.availableCoins;
+          final bool hasEnough = balance >= requiredCoins;
+
+          return Container(
+            padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: _borderGrey,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundImage: (creator.photoUrl.isNotEmpty &&
+                              !creator.photoUrl.startsWith('blob:') &&
+                              creator.photoUrl.startsWith('http'))
+                          ? NetworkImage(creator.photoUrl)
+                          : null,
+                      child: (creator.photoUrl.isEmpty ||
+                              creator.photoUrl.startsWith('blob:') ||
+                              !creator.photoUrl.startsWith('http'))
+                          ? const Icon(Icons.person, color: Colors.white70)
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Video Call with ${creator.name}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: _textDark,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              const CoinIcon(size: 12),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$ratePerMin Coins/min • Auto-cut at time limit',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: _primaryTeal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Select Duration:',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _textDark,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [5, 10, 15].map((mins) {
+                    final isSel = selectedMinutes == mins;
+                    final price = ratePerMin * mins;
+
+                    return Expanded(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => setModalState(() => selectedMinutes = mins),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSel ? const Color(0xFFE5F7F4) : const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSel ? _primaryTeal : const Color(0xFFE5E7EB),
+                              width: isSel ? 1.8 : 1,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                '$mins Mins',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: isSel ? _primaryTeal : const Color(0xFF374151),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const CoinIcon(size: 11),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    '$price',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: isSel ? _primaryTeal : const Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      if (!hasEnough) {
+                        _showInsufficientBalanceSheet(creator, requiredCoins);
+                      } else {
+                        _startLiveCall(creator, selectedMinutes);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primaryTeal,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Start Call ($requiredCoins Coins)',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _startLiveCall(CreatorModel creator, int durationMinutes) async {
+    final appState = AppState.instance;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -106,6 +281,7 @@ class _VideoCallsScreenState extends State<VideoCallsScreen> {
               creator: creator,
               isVideoCall: true,
               callId: callId,
+              durationMinutes: durationMinutes,
             ),
           ),
         );

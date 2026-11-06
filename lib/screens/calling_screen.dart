@@ -11,12 +11,14 @@ class CallingScreen extends StatefulWidget {
   final CreatorModel creator;
   final bool isVideoCall;
   final String callId;
+  final int durationMinutes;
 
   const CallingScreen({
     super.key,
     required this.creator,
     required this.callId,
     this.isVideoCall = true,
+    this.durationMinutes = 5,
   });
 
   @override
@@ -72,6 +74,7 @@ class _CallingScreenState extends State<CallingScreen>
                   isVideoCall: widget.isVideoCall,
                   callId: widget.callId,
                   isCaller: true,
+                  initialDurationSeconds: widget.durationMinutes * 60,
                 ),
               ),
             );

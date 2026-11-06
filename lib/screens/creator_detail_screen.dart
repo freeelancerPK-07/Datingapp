@@ -75,18 +75,20 @@ class _CreatorDetailScreenState extends State<CreatorDetailScreen> {
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
     ];
 
+    final ratePerMin = widget.creator.diamondsPerMin > 0 ? widget.creator.diamondsPerMin : 50;
+
     _services = [
-      const ServiceOption(
+      ServiceOption(
         id: 'video_call',
-        title: 'Video Call (10 Minutes)',
+        title: 'Video Call (5 - 15 Mins)',
         description: 'Private 1-on-1 live HD video call interaction',
-        basePrice: 500,
-        baseDuration: '10 Minutes HD',
+        basePrice: ratePerMin * 5,
+        baseDuration: '5 Minutes HD',
         icon: Icons.videocam_rounded,
         durationOptions: [
-          DurationOption(label: '10 Mins', minutes: 10, price: 500),
-          DurationOption(label: '20 Mins', minutes: 20, price: 1000),
-          DurationOption(label: '30 Mins', minutes: 30, price: 1500),
+          DurationOption(label: '5 Mins', minutes: 5, price: ratePerMin * 5),
+          DurationOption(label: '10 Mins', minutes: 10, price: ratePerMin * 10),
+          DurationOption(label: '15 Mins', minutes: 15, price: ratePerMin * 15),
         ],
       ),
     ];
@@ -1393,6 +1395,7 @@ class _BookingFlowModalState extends State<_BookingFlowModal>
                   creator: widget.creator,
                   isVideoCall: isVideo,
                   callId: res['callId'] as String,
+                  durationMinutes: _selectedDuration?.minutes ?? 5,
                 ),
               ),
             );

@@ -65,11 +65,14 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
     super.initState();
     _isVideoEnabled = widget.isVideoCall;
     _secondsRemaining = widget.initialDurationSeconds;
+    final bool hasEscrow = AppState.instance.lockedCoins > 0;
     if (widget.isCaller) {
-      _diamondsUsed = widget.creator.diamondsPerMin; // First minute charged upon connection
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        AppState.instance.deductDiamonds(widget.creator.diamondsPerMin, widget.creator.name);
-      });
+      _diamondsUsed = widget.creator.diamondsPerMin; // First minute
+      if (!hasEscrow) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          AppState.instance.deductDiamonds(widget.creator.diamondsPerMin, widget.creator.name);
+        });
+      }
     }
 
     // Initialize WebRTC live camera & microphone
@@ -133,15 +136,24 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
       }
       if (widget.isCaller) {
         final appState = AppState.instance;
-        if (appState.diamondBalance < widget.creator.diamondsPerMin) {
-          // Auto-end call when balance is insufficient for next minute
-          timer.cancel();
-          _handleEndCall(isAutoEnd: true);
-        } else {
-          appState.deductDiamonds(widget.creator.diamondsPerMin, widget.creator.name);
+        final bool hasEscrow = appState.lockedCoins > 0;
+
+        if (hasEscrow) {
+          // In escrow booking mode, usage is tracked against the reserved amount
           setState(() {
             _diamondsUsed += widget.creator.diamondsPerMin;
           });
+        } else {
+          // In pay-as-you-go mode, check available balance
+          if (appState.diamondBalance < widget.creator.diamondsPerMin) {
+            timer.cancel();
+            _handleEndCall(isAutoEnd: true);
+          } else {
+            appState.deductDiamonds(widget.creator.diamondsPerMin, widget.creator.name);
+            setState(() {
+              _diamondsUsed += widget.creator.diamondsPerMin;
+            });
+          }
         }
       } else {
         setState(() {
@@ -212,7 +224,19 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
       ),
     );
 
-    if (isAutoEnd && mounted) {
+    if (isTimeout && mounted) {
+      final scheduledMins = (widget.initialDurationSeconds / 60).round();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '⏰ $scheduledMins-minute session completed. Call ended automatically.',
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: const Color(0xFF007A78),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } else if (isAutoEnd && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -252,6 +276,8 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
         diamondsUsed: _diamondsUsed,
         remainingBalance: AppState.instance.diamondBalance,
         isVideoCall: widget.isVideoCall,
+        isTimeout: isTimeout,
+        initialDurationSeconds: widget.initialDurationSeconds,
         onDone: () {
           Navigator.of(ctx).pop();
           Navigator.of(context).pop();
@@ -486,13 +512,19 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                         ),
                       ),
 
-                      // Timer & Network Quality Pill
+                      // Timer & Network Quality Pill (Shows remaining countdown and auto-cut indicator)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: Colors.black54,
+                          color: _secondsRemaining <= 60
+                              ? const Color(0xFFDC2626).withValues(alpha: 0.85)
+                              : Colors.black54,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white24),
+                          border: Border.all(
+                            color: _secondsRemaining <= 60
+                                ? const Color(0xFFEF4444)
+                                : Colors.white24,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -501,15 +533,23 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                               width: 8,
                               height: 8,
                               decoration: BoxDecoration(
-                                color: _networkQuality == NetworkQuality.strong
-                                    ? const Color(0xFF22C55E)
-                                    : const Color(0xFFF59E0B),
+                                color: _secondsRemaining <= 60
+                                    ? Colors.white
+                                    : (_networkQuality == NetworkQuality.strong
+                                        ? const Color(0xFF22C55E)
+                                        : const Color(0xFFF59E0B)),
                                 shape: BoxShape.circle,
                               ),
                             ),
                             const SizedBox(width: 5),
+                            Icon(
+                              Icons.timer_outlined,
+                              size: 13,
+                              color: _secondsRemaining <= 60 ? Colors.white : const Color(0xFFFFD43B),
+                            ),
+                            const SizedBox(width: 4),
                             Text(
-                              _formatDuration(_elapsedSeconds),
+                              _formatDuration(_secondsRemaining),
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w800,
@@ -521,6 +561,39 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                       ),
                     ],
                   ),
+
+                  // 1-minute auto-cut warning banner
+                  if (_secondsRemaining <= 60)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDC2626).withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x44DC2626),
+                            blurRadius: 8,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.timer_off_rounded, color: Colors.white, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Session ending in ${_secondsRemaining}s • Automatic Cut',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                   // Low Balance Warning Banner (balance < 1 min, Recharge without call cut)
                   AnimatedBuilder(
@@ -800,6 +873,8 @@ class _PostCallReviewSheet extends StatefulWidget {
   final int diamondsUsed;
   final int remainingBalance;
   final bool isVideoCall;
+  final bool isTimeout;
+  final int initialDurationSeconds;
   final VoidCallback onDone;
 
   const _PostCallReviewSheet({
@@ -808,6 +883,8 @@ class _PostCallReviewSheet extends StatefulWidget {
     required this.diamondsUsed,
     required this.remainingBalance,
     this.isVideoCall = true,
+    this.isTimeout = false,
+    this.initialDurationSeconds = 600,
     required this.onDone,
   });
 
@@ -873,6 +950,32 @@ class _PostCallReviewSheetState extends State<_PostCallReviewSheet> {
                 color: const Color(0xFF6B7280),
               ),
             ),
+            if (widget.isTimeout) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE6F4EA),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF34A853)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Color(0xFF34A853), size: 14),
+                    const SizedBox(width: 5),
+                    Text(
+                      '${(widget.initialDurationSeconds / 60).round()}-Minute Session Completed • Auto-Cut',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF137333),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 18),
 
             // Call Summary Metrics Card
@@ -1154,7 +1257,7 @@ class _PostCallReviewSheetState extends State<_PostCallReviewSheet> {
                   // Settle escrow booking (PRD Requirement G - Step 10)
                   AppState.instance.completeBookingSettlement(
                     serviceName: widget.isVideoCall ? 'Video Call' : 'Voice Call',
-                    amount: 500.0,
+                    amount: widget.diamondsUsed.toDouble(),
                     creatorSharePercent: 0.70,
                   );
 
