@@ -131,7 +131,7 @@ class _VideoCallsScreenState extends State<VideoCallsScreen> {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
-                              color: _textDark,
+                              color: _textPrimary,
                             ),
                           ),
                           Row(
@@ -159,7 +159,7 @@ class _VideoCallsScreenState extends State<VideoCallsScreen> {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: _textDark,
+                    color: _textPrimary,
                   ),
                 ),
                 const SizedBox(height: 10),
