@@ -1,0 +1,375 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.authRouter = void 0;
+const express_1 = require("express");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const prisma_js_1 = require("../lib/prisma.js");
+const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
+const JWT_SECRET = process.env.JWT_SECRET || 'linkup_jwt_secret_key';
+// Initialize Firebase Admin SDK with service account credentials
+// @ts-ignore - firebase-admin types may not match exact API
+if ((0, app_1.getApps)().length === 0) {
+    (0, app_1.initializeApp)({
+        credential: (0, app_1.cert)({
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        }),
+    });
+}
+exports.authRouter = (0, express_1.Router)();
+/**
+ * Check if email exists in PostgreSQL
+ * GET /api/v1/auth/google/check?email=...
+ */
+exports.authRouter.get('/google/check', async (req, res) => {
+    try {
+        const { email } = req.query;
+        if (!email || typeof email !== 'string') {
+            return res.status(400).json({ success: false, error: 'Email query parameter is required' });
+        }
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = await prisma_js_1.prisma.user.findFirst({
+            where: { email: normalizedEmail },
+            include: { profile: true },
+        });
+        if (user) {
+            return res.json({
+                success: true,
+                exists: true,
+                isProfileCompleted: user.profile?.isCompleted ?? false,
+            });
+        }
+        return res.json({
+            success: true,
+            exists: false,
+        });
+    }
+    catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+/**
+ * Google Login: Verify Firebase token, check PostgreSQL, return existing user if found. Never create a user.
+ * POST /api/v1/auth/google-login
+ */
+exports.authRouter.post('/google-login', async (req, res) => {
+    try {
+        const { idToken } = req.body;
+        if (!idToken) {
+            return res.status(400).json({ success: false, error: 'ID token is required' });
+        }
+        // Verify the Firebase ID token - use decoded email from verified token
+        let decodedToken;
+        try {
+            // @ts-ignore - firebase-admin types may not match exact API
+            decodedToken = await (0, auth_1.getAuth)().verifyIdToken(idToken);
+        }
+        catch (tokenError) {
+            console.error('[AUTH] Firebase verifyIdToken error in google-login:', tokenError);
+            return res.status(401).json({ success: false, error: 'Invalid or expired Firebase token' });
+        }
+        const normalizedEmail = decodedToken.email?.trim().toLowerCase();
+        if (!normalizedEmail) {
+            return res.status(400).json({ success: false, error: 'Email not found in Firebase token' });
+        }
+        // Check if user exists in PostgreSQL - use verified token email
+        let user = await prisma_js_1.prisma.user.findFirst({
+            where: { email: normalizedEmail },
+            include: { profile: true, wallet: true },
+        });
+        if (!user) {
+            // User not found - return error for login flow (Flutter will redirect to signup)
+            return res.status(404).json({
+                success: false,
+                code: 'USER_NOT_FOUND',
+                error: 'USER_NOT_FOUND',
+                message: 'No account found. Please sign up.',
+            });
+        }
+        // User exists - sign JWT and return
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+        const isProfileCompleted = user.profile?.isCompleted ?? false;
+        return res.json({
+            success: true,
+            isNewUser: false,
+            isProfileCompleted,
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                profile: user.profile,
+                wallet: user.wallet,
+            },
+        });
+    }
+    catch (error) {
+        console.error('[AUTH] Google login error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+/**
+ * Google Signup: Verify Firebase token, check PostgreSQL, create user only if email does not exist.
+ * POST /api/v1/auth/google-signup
+ */
+exports.authRouter.post('/google-signup', async (req, res) => {
+    try {
+        const { idToken, name } = req.body;
+        if (!idToken) {
+            return res.status(400).json({ success: false, error: 'ID token is required' });
+        }
+        // Verify the Firebase ID token - use decoded email from verified token
+        // @ts-ignore - firebase-admin types may not match exact API
+        let decodedToken = await (0, auth_1.getAuth)().verifyIdToken(idToken);
+        const normalizedEmail = decodedToken.email?.trim().toLowerCase();
+        if (!normalizedEmail) {
+            return res.status(400).json({ success: false, error: 'Email not found in Firebase token' });
+        }
+        // Check if user already exists in PostgreSQL - use verified token email
+        let user = await prisma_js_1.prisma.user.findFirst({
+            where: { email: normalizedEmail },
+            include: { profile: true, wallet: true },
+        });
+        if (user) {
+            // User already exists - return existing user, no duplicate
+            const token = jsonwebtoken_1.default.sign({ userId: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+            const isProfileCompleted = user.profile?.isCompleted ?? false;
+            return res.json({
+                success: true,
+                isNewUser: false,
+                isProfileCompleted,
+                token,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    role: user.role,
+                    profile: user.profile,
+                    wallet: user.wallet,
+                },
+            });
+        }
+        // User does not exist - create new user with Google email and display name
+        user = await prisma_js_1.prisma.user.create({
+            data: {
+                email: normalizedEmail,
+                isVerified: true,
+                profile: {
+                    create: {
+                        name: name ? name.trim() : 'LinkUp User',
+                        isCompleted: false,
+                        currentStep: 1,
+                    },
+                },
+                wallet: {
+                    create: {
+                        balance: 100, // Welcome bonus diamonds
+                    },
+                },
+            },
+            include: { profile: true, wallet: true },
+        });
+        // Sign JWT
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+        const isProfileCompleted = user.profile?.isCompleted ?? false;
+        return res.json({
+            success: true,
+            isNewUser: true,
+            isProfileCompleted,
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                profile: user.profile,
+                wallet: user.wallet,
+            },
+        });
+    }
+    catch (error) {
+        console.error('[AUTH] Google signup error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+/**
+ * Email/Password Registration
+ * POST /api/v1/auth/register
+ */
+exports.authRouter.post('/register', async (req, res) => {
+    try {
+        const { email, password, name, phone } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ success: false, error: 'Email and password are required' });
+        }
+        if (password.length < 6) {
+            return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
+        }
+        const normalizedEmail = email.trim().toLowerCase();
+        // Check if email already registered
+        const existing = await prisma_js_1.prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email: normalizedEmail },
+                    ...(phone ? [{ phone: phone.trim() }] : []),
+                ],
+            },
+        });
+        if (existing) {
+            return res.status(409).json({
+                success: false,
+                error: 'An account with this email or phone already exists. Please sign in.',
+            });
+        }
+        // Hash password
+        const passwordHash = await bcryptjs_1.default.hash(password, 10);
+        // Create user with initial profile and wallet
+        const user = await prisma_js_1.prisma.user.create({
+            data: {
+                email: normalizedEmail,
+                passwordHash,
+                phone: phone ? phone.trim() : null,
+                isVerified: true,
+                profile: {
+                    create: {
+                        name: name ? name.trim() : 'LinkUp User',
+                        isCompleted: false,
+                        currentStep: 1,
+                    },
+                },
+                wallet: {
+                    create: {
+                        balance: 100, // 100 welcome bonus diamonds
+                    },
+                },
+            },
+            include: { profile: true, wallet: true },
+        });
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+        return res.status(201).json({
+            success: true,
+            isNewUser: true,
+            isProfileCompleted: false,
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                profile: user.profile,
+                wallet: user.wallet,
+            },
+        });
+    }
+    catch (error) {
+        console.error('[AUTH] Register error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+/**
+ * Email/Password Login
+ * POST /api/v1/auth/login
+ */
+exports.authRouter.post('/login', async (req, res) => {
+    try {
+        const { email, password, identifier } = req.body;
+        const loginIdentifier = (email || identifier || '').trim().toLowerCase();
+        if (!loginIdentifier || !password) {
+            return res.status(400).json({ success: false, error: 'Email and password are required' });
+        }
+        // Find user by email or phone
+        const user = await prisma_js_1.prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email: loginIdentifier },
+                    { phone: loginIdentifier },
+                ],
+            },
+            include: { profile: true, wallet: true },
+        });
+        if (!user) {
+            return res.status(401).json({ success: false, error: 'No account found with this email. Please check or sign up.' });
+        }
+        // Verify password if hash exists
+        if (user.passwordHash) {
+            const match = await bcryptjs_1.default.compare(password, user.passwordHash);
+            if (!match) {
+                return res.status(401).json({ success: false, error: 'Incorrect password. Please try again.' });
+            }
+        }
+        // Sign JWT
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, email: user.email, phone: user.phone, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+        const isProfileCompleted = user.profile?.isCompleted ?? false;
+        return res.json({
+            success: true,
+            isNewUser: false,
+            isProfileCompleted,
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                profile: user.profile,
+                wallet: user.wallet,
+            },
+        });
+    }
+    catch (error) {
+        console.error('[AUTH] Login error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+/**
+ * Verify Current Session & Profile Status
+ * GET /api/v1/auth/me
+ */
+exports.authRouter.get('/me', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        let userId = req.query.userId;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.substring(7);
+            try {
+                const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+                if (decoded?.userId) {
+                    userId = decoded.userId;
+                }
+            }
+            catch (_) {
+                return res.status(401).json({ success: false, error: 'Invalid or expired session token' });
+            }
+        }
+        if (!userId) {
+            return res.status(400).json({ success: false, error: 'User ID or valid Bearer token is required' });
+        }
+        const user = await prisma_js_1.prisma.user.findUnique({
+            where: { id: userId },
+            include: { profile: true, wallet: true, creator: true },
+        });
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User session not found' });
+        }
+        const isProfileCompleted = user.profile?.isCompleted ?? false;
+        return res.json({
+            success: true,
+            isProfileCompleted,
+            user: {
+                id: user.id,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                profile: user.profile,
+                wallet: user.wallet,
+                isCreator: !!user.creator,
+            },
+        });
+    }
+    catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
