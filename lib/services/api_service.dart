@@ -29,33 +29,25 @@ class ApiService {
     if (_authToken != null && _authToken!.isNotEmpty) 'Authorization': 'Bearer $_authToken',
   };
 
+  static const String productionUrl = 'https://linkup-jwzs.onrender.com/api/v1';
+
   /// Returns appropriate base URL based on platform & connectivity
   String get baseUrl {
     if (_resolvedBaseUrl.isNotEmpty) return _resolvedBaseUrl;
-    if (kIsWeb) {
-      return 'http://localhost:5000/api/v1';
-    }
-    try {
-      if (Platform.isAndroid) {
-        // Physical phone on local Wi-Fi or adb reverse
-        return 'http://10.186.14.158:5000/api/v1';
-      }
-    } catch (_) {}
-    return 'http://localhost:5000/api/v1';
+    return productionUrl;
   }
 
-  /// Automatically probes backend on app startup (supports Emulator, Physical Phone via adb reverse, and LAN)
+  /// Automatically probes backend on app startup (supports Production Cloud, Physical Phone, and Emulator)
   Future<void> probeBackendUrl() async {
-    if (kIsWeb) return;
     final candidates = [
+      productionUrl,                      // Live Production Cloud Backend (Render)
       'http://10.186.14.158:5000/api/v1', // Physical phone on Wi-Fi (Host PC IP)
       'http://localhost:5000/api/v1',     // Physical phone via adb reverse
       'http://10.0.2.2:5000/api/v1',      // Android Emulator
-      'http://127.0.0.1:5000/api/v1',
     ];
     for (final url in candidates) {
       try {
-        final res = await http.get(Uri.parse('$url/creators')).timeout(const Duration(milliseconds: 1500));
+        final res = await http.get(Uri.parse('$url/creators')).timeout(const Duration(milliseconds: 3000));
         if (res.statusCode == 200) {
           _resolvedBaseUrl = url;
           debugPrint('[ApiService] Connected to backend at: $url');
@@ -63,6 +55,7 @@ class ApiService {
         }
       } catch (_) {}
     }
+    _resolvedBaseUrl = productionUrl;
   }
 
   // ---------------------------------------------------------------------------
