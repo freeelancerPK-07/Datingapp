@@ -32,6 +32,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   Future<void> _handleGoogleSignIn() async {
     try {
+      await GoogleSignIn.instance.initialize(
+        serverClientId: '675437277662-rpqvkgpfa9oruutealq8c65hhjqpg62t.apps.googleusercontent.com',
+      );
       final account = await GoogleSignIn.instance.authenticate();
       final idToken = account.authentication.idToken;
       final credential = GoogleAuthProvider.credential(idToken: idToken);

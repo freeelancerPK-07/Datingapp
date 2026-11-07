@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:version1/screens/splash_screen.dart';
 import 'package:version1/services/app_state.dart';
 import 'package:version1/services/navigation_service.dart';
@@ -9,8 +10,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp();
+    await GoogleSignIn.instance.initialize(
+      serverClientId: '675437277662-rpqvkgpfa9oruutealq8c65hhjqpg62t.apps.googleusercontent.com',
+    );
   } catch (e) {
-    debugPrint('Firebase init error: $e');
+    debugPrint('Firebase/GoogleSignIn init error: $e');
   }
   runApp(const LinkUpApp());
 }
