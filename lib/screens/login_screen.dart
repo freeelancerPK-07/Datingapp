@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         Map<String, dynamic>? res;
 
-        // 1. Try Firebase Authentication first
+        // 1. Try Firebase Authentication with Email and Password directly
         try {
           final userCred = await FirebaseAuth.instance.signInWithEmailAndPassword(
             email: email,
@@ -53,51 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
           final fbUser = userCred.user;
 
-          if (fbUser != null && !fbUser.emailVerified) {
-            setState(() => _isLoading = false);
-            if (!mounted) return;
-            showDialog(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                title: const Row(
-                  children: [
-                    Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706)),
-                    SizedBox(width: 8),
-                    Text('Email Not Verified'),
-                  ],
-                ),
-                content: Text(
-                  'Please verify your email ($email) before logging in. Check your inbox or click resend below.',
-                  style: const TextStyle(fontSize: 14, height: 1.4),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () async {
-                      await fbUser.sendEmailVerification();
-                      if (ctx.mounted) {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(
-                            backgroundColor: Color(0xFF007A78),
-                            content: Text('Verification email resent! Please check your inbox.'),
-                          ),
-                        );
-                      }
-                    },
-                    child: const Text('Resend Verification', style: TextStyle(color: Color(0xFF007A78), fontWeight: FontWeight.bold)),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('OK', style: TextStyle(color: Color(0xFF64748B))),
-                  ),
-                ],
-              ),
-            );
-            return;
-          }
-
-          if (fbUser != null && fbUser.emailVerified) {
+          if (fbUser != null && fbUser.email != null) {
             res = await ApiService.instance.syncFirebaseUser(
               email: fbUser.email!,
               name: fbUser.displayName,
