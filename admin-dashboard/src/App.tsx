@@ -40,7 +40,8 @@ import {
   Share2,
 } from 'lucide-react';
 
-const API_BASE = '/api/v1';
+const LIVE_BACKEND_URL = ((import.meta as any).env?.VITE_API_URL as string) || 'https://linkup-jwzs.onrender.com';
+const API_BASE = `${LIVE_BACKEND_URL}/api/v1`;
 
 // Types
 interface OverviewStats {
@@ -596,9 +597,9 @@ export default function App() {
               <span className={`w-2.5 h-2.5 rounded-full ${apiConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
               <div>
                 <p className="text-xs font-bold text-slate-800">
-                  {apiConnected ? 'Database Online' : 'Connecting DB'}
+                  {apiConnected ? 'Cloud DB Online' : 'Connecting Cloud'}
                 </p>
-                <p className="text-[10px] text-slate-500">PostgreSQL (Local:5432)</p>
+                <p className="text-[10px] text-slate-500">Supabase &amp; Render Live</p>
               </div>
             </div>
             <button
@@ -2001,7 +2002,7 @@ function AvatarImage({
     const s = src.trim();
     if (!s.startsWith('/data/') && !s.startsWith('file:') && !s.startsWith('content:')) {
       if (s.includes('/uploads/')) {
-        cleanUrl = '/uploads/' + s.split('/uploads/')[1];
+        cleanUrl = `${LIVE_BACKEND_URL}/uploads/` + s.split('/uploads/')[1];
       } else {
         cleanUrl = s;
       }
