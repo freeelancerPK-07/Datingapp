@@ -2,14 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/constants/app_icon_base64.dart';
-import 'package:version1/screens/home_screen.dart';
 import 'package:version1/screens/phone_auth_screen.dart';
-import 'package:version1/screens/profile_setup_screen.dart';
 import 'package:version1/screens/signup_screen.dart';
 import 'package:version1/screens/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:version1/services/api_service.dart';
-import 'package:version1/services/app_state.dart';
 
 /// Full-Page Email Sign Up Screen matching LinkUp Account Creation design
 class EmailSignUpScreen extends StatefulWidget {

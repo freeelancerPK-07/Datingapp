@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       await fbUser.sendEmailVerification();
                       if (ctx.mounted) {
                         Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(ctx).showSnackBar(
                           const SnackBar(
                             backgroundColor: Color(0xFF007A78),
                             content: Text('Verification email resent! Please check your inbox.'),
@@ -202,18 +202,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
     try {
-      final googleSignIn = GoogleSignIn();
-      final googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
+      final account = await GoogleSignIn.instance.authenticate();
+      final idToken = account.authentication.idToken;
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
 
       final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       final fbUser = userCredential.user;
@@ -225,8 +216,8 @@ class _LoginScreenState extends State<LoginScreen> {
       // Sync verified Google user with Supabase DB through Render Backend
       final res = await ApiService.instance.syncFirebaseUser(
         email: fbUser.email!,
-        name: fbUser.displayName ?? googleUser.displayName,
-        avatarUrl: fbUser.photoURL ?? googleUser.photoUrl,
+        name: fbUser.displayName ?? account.displayName,
+        avatarUrl: fbUser.photoURL ?? account.photoUrl,
       );
 
       if (!mounted) return;
@@ -246,7 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
         userId: userId,
         isProfileCompleted: isProfileCompleted,
         email: fbUser.email!,
-        name: fbUser.displayName ?? googleUser.displayName,
+        name: fbUser.displayName ?? account.displayName,
         profile: profile,
       );
 
@@ -273,6 +264,18 @@ class _LoginScreenState extends State<LoginScreen> {
           (route) => false,
         );
       }
+    } on GoogleSignInException catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        return; // User canceled sign-in quietly
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFD32F2F),
+          content: Text('Google Sign-In: ${e.description ?? e.code.name}'),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);

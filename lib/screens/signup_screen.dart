@@ -32,15 +32,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   Future<void> _handleGoogleSignIn() async {
     try {
-      final googleSignIn = GoogleSignIn();
-      final googleUser = await googleSignIn.signIn();
-      if (googleUser == null) return;
-
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
+      final account = await GoogleSignIn.instance.authenticate();
+      final idToken = account.authentication.idToken;
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
 
       final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       final fbUser = userCredential.user;
@@ -52,8 +46,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       // Sync verified Google user with Supabase DB through Render Backend
       final res = await ApiService.instance.syncFirebaseUser(
         email: fbUser.email!,
-        name: fbUser.displayName ?? googleUser.displayName,
-        avatarUrl: fbUser.photoURL ?? googleUser.photoUrl,
+        name: fbUser.displayName ?? account.displayName,
+        avatarUrl: fbUser.photoURL ?? account.photoUrl,
       );
 
       if (!mounted) return;
@@ -73,7 +67,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         userId: userId,
         isProfileCompleted: isProfileCompleted,
         email: fbUser.email!,
-        name: fbUser.displayName ?? googleUser.displayName,
+        name: fbUser.displayName ?? account.displayName,
         profile: profile,
       );
 
@@ -99,6 +93,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
           (route) => false,
         );
       }
+    } on GoogleSignInException catch (e) {
+      if (!mounted) return;
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        return; // User canceled sign-in quietly
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFD32F2F),
+          content: Text('Google Sign-In: ${e.description ?? e.code.name}'),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
