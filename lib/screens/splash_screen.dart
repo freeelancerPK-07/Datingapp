@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
 import 'package:version1/screens/home_screen.dart';
 import 'package:version1/screens/no_internet_screen.dart';
 import 'package:version1/screens/profile_setup_screen.dart';
@@ -63,21 +64,32 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted || _navigated) return;
     _navigated = true;
 
-    // Check device internet connectivity
+    // Check device internet connectivity (supports both Wi-Fi and Mobile Data)
     final isOnline = await NoInternetScreen.hasInternet();
     if (!isOnline) {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const NoInternetScreen(
-            targetScreen: WelcomeScreen(),
+      // Secondary check: verify if live Render backend is directly reachable before showing offline wall
+      bool backendReachable = false;
+      try {
+        final res = await http
+            .get(Uri.parse('https://linkup-jwzs.onrender.com/health'))
+            .timeout(const Duration(seconds: 4));
+        backendReachable = res.statusCode == 200;
+      } catch (_) {}
+
+      if (!backendReachable) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const NoInternetScreen(
+              targetScreen: WelcomeScreen(),
+            ),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                FadeTransition(opacity: animation, child: child),
+            transitionDuration: const Duration(milliseconds: 350),
           ),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-              FadeTransition(opacity: animation, child: child),
-          transitionDuration: const Duration(milliseconds: 350),
-        ),
-      );
-      return;
+        );
+        return;
+      }
     }
 
     try {

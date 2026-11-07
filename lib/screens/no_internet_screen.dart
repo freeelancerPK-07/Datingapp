@@ -13,27 +13,38 @@ class NoInternetScreen extends StatefulWidget {
     this.targetScreen,
   });
 
-  /// Helper to test if device has real working internet connectivity
+  /// Robust, multi-tier helper to test if device has working internet (supports both Wi-Fi and Mobile Data)
   static Future<bool> hasInternet() async {
-    if (kIsWeb) {
-      try {
-        final res = await http
-            .head(Uri.parse('https://www.google.com'))
-            .timeout(const Duration(seconds: 3));
-        return res.statusCode > 0;
-      } catch (_) {
-        return false;
-      }
-    }
+    // 1. Android standard 204 connectivity probe (Fastest & most reliable across Wi-Fi & 4G/5G)
     try {
-      final result = await InternetAddress.lookup('google.com')
+      final res = await http
+          .get(Uri.parse('https://connectivitycheck.gstatic.com/generate_204'))
+          .timeout(const Duration(seconds: 4));
+      if (res.statusCode == 204 || res.statusCode == 200) {
+        return true;
+      }
+    } catch (_) {}
+
+    // 2. Direct Cloudflare 1.1.1.1 IP probe (bypasses local DNS delays)
+    try {
+      final res = await http
+          .head(Uri.parse('https://1.1.1.1'))
           .timeout(const Duration(seconds: 3));
-      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } on SocketException catch (_) {
-      return false;
-    } catch (_) {
-      return false;
+      if (res.statusCode > 0) return true;
+    } catch (_) {}
+
+    // 3. DNS Lookup fallback
+    if (!kIsWeb) {
+      try {
+        final result = await InternetAddress.lookup('google.com')
+            .timeout(const Duration(seconds: 4));
+        if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+          return true;
+        }
+      } catch (_) {}
     }
+
+    return false;
   }
 
   @override

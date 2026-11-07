@@ -9,7 +9,7 @@ class ApiService {
   factory ApiService() => instance;
   ApiService._internal();
 
-  String _resolvedBaseUrl = '';
+  String _resolvedBaseUrl = productionUrl;
   String? _authToken;
 
   String? get authToken => _authToken;
@@ -47,7 +47,7 @@ class ApiService {
     ];
     for (final url in candidates) {
       try {
-        final res = await http.get(Uri.parse('$url/creators')).timeout(const Duration(milliseconds: 3000));
+        final res = await http.get(Uri.parse('$url/creators')).timeout(const Duration(milliseconds: 5000));
         if (res.statusCode == 200) {
           _resolvedBaseUrl = url;
           debugPrint('[ApiService] Connected to backend at: $url');
