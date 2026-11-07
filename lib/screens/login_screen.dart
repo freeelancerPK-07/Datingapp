@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:version1/constants/app_icon_base64.dart';
 import 'package:version1/constants/svg_assets.dart';
 import 'package:version1/screens/home_screen.dart';
@@ -42,7 +43,73 @@ class _LoginScreenState extends State<LoginScreen> {
         final email = _emailController.text.trim();
         final password = _passwordController.text;
 
-        final res = await ApiService.instance.loginEmail(
+        Map<String, dynamic>? res;
+
+        // 1. Try Firebase Authentication first
+        try {
+          final userCred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+          final fbUser = userCred.user;
+
+          if (fbUser != null && !fbUser.emailVerified) {
+            setState(() => _isLoading = false);
+            if (!mounted) return;
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                title: const Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706)),
+                    SizedBox(width: 8),
+                    Text('Email Not Verified'),
+                  ],
+                ),
+                content: Text(
+                  'Please verify your email ($email) before logging in. Check your inbox or click resend below.',
+                  style: const TextStyle(fontSize: 14, height: 1.4),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () async {
+                      await fbUser.sendEmailVerification();
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFF007A78),
+                            content: Text('Verification email resent! Please check your inbox.'),
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text('Resend Verification', style: TextStyle(color: Color(0xFF007A78), fontWeight: FontWeight.bold)),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('OK', style: TextStyle(color: Color(0xFF64748B))),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+
+          if (fbUser != null && fbUser.emailVerified) {
+            res = await ApiService.instance.syncFirebaseUser(
+              email: fbUser.email!,
+              name: fbUser.displayName,
+              avatarUrl: fbUser.photoURL,
+            );
+          }
+        } on FirebaseAuthException catch (fbErr) {
+          debugPrint('[Login] Firebase auth error: ${fbErr.code} - ${fbErr.message}');
+        }
+
+        // 2. Fallback to direct backend login if user was registered on backend directly
+        res ??= await ApiService.instance.loginEmail(
           email: email,
           password: password,
         );
@@ -93,8 +160,8 @@ class _LoginScreenState extends State<LoginScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
-            content: Row(
-              children: const [
+            content: const Row(
+              children: [
                 Icon(Icons.check_circle_rounded, color: Colors.white),
                 SizedBox(width: 10),
                 Expanded(
@@ -133,34 +200,69 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
     try {
-      final account = await GoogleSignIn.instance.authenticate();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF007A78),
-            content: Text('Signed in as ${account.displayName ?? account.email}'),
-          ),
-        );
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-        );
+      final googleSignIn = GoogleSignIn();
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        setState(() => _isLoading = false);
         return;
       }
-    } catch (_) {
-      // In mock/test/web fallback environments
-    }
 
-    if (mounted) {
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final fbUser = userCredential.user;
+
+      if (fbUser == null || fbUser.email == null || fbUser.email!.isEmpty) {
+        throw Exception('Unable to retrieve verified email from Google.');
+      }
+
+      // Sync verified Google user with Supabase DB through Render Backend
+      final res = await ApiService.instance.syncFirebaseUser(
+        email: fbUser.email!,
+        name: fbUser.displayName ?? googleUser.displayName,
+        avatarUrl: fbUser.photoURL ?? googleUser.photoUrl,
+      );
+
+      if (!mounted) return;
+
+      if (res['success'] != true || res['token'] == null) {
+        throw Exception(res['error'] ?? 'Backend synchronization failed');
+      }
+
+      final token = res['token'].toString();
+      final userId = res['user']?['id']?.toString() ?? '';
+      final profile = res['user']?['profile'] as Map<String, dynamic>?;
+      final bool isProfileCompleted = res['isProfileCompleted'] == true ||
+          (profile != null && profile['isCompleted'] == true);
+
+      await AppState.instance.saveUserSession(
+        token: token,
+        userId: userId,
+        isProfileCompleted: isProfileCompleted,
+        email: fbUser.email!,
+        name: fbUser.displayName ?? googleUser.displayName,
+        profile: profile,
+      );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Color(0xFF007A78),
+        SnackBar(
+          backgroundColor: const Color(0xFF007A78),
           behavior: SnackBarBehavior.floating,
-          content: Text('Connected with Google successfully!'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          content: Text('Signed in as ${fbUser.displayName ?? fbUser.email}!'),
         ),
       );
-      if (!AppState.instance.isProfileCompleted) {
+
+      if (!isProfileCompleted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
           (route) => false,
@@ -171,6 +273,15 @@ class _LoginScreenState extends State<LoginScreen> {
           (route) => false,
         );
       }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFD32F2F),
+          content: Text('Google Sign-In error: $e'),
+        ),
+      );
     }
   }
 

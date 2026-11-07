@@ -273,6 +273,85 @@ authRouter.post('/login', async (req, res) => {
 });
 
 /**
+ * Firebase Authenticated User Sync (Google Sign-In / Verified Email)
+ * POST /api/v1/auth/firebase-sync
+ */
+authRouter.post('/firebase-sync', async (req, res) => {
+  try {
+    const { email, name, avatarUrl } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email is required for Firebase sync' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check if user already exists
+    let user = await prisma.user.findFirst({
+      where: { email: normalizedEmail },
+      include: { profile: true, wallet: true, creator: true },
+    });
+
+    let isNewUser = false;
+
+    if (!user) {
+      isNewUser = true;
+      user = await prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          isVerified: true,
+          profile: {
+            create: {
+              name: name?.trim() || 'LinkUp User',
+              avatarUrl: avatarUrl || '',
+              isCompleted: false,
+              currentStep: 1,
+            },
+          },
+          wallet: {
+            create: {
+              balance: 100, // 100 welcome bonus diamonds
+            },
+          },
+        },
+        include: { profile: true, wallet: true, creator: true },
+      });
+    }
+
+    if (!user) {
+      return res.status(500).json({ success: false, error: 'Failed to process user session' });
+    }
+
+    // Sign LinkUp JWT
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    const isProfileCompleted = user.profile?.isCompleted ?? false;
+
+    return res.json({
+      success: true,
+      isNewUser,
+      isProfileCompleted,
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        profile: user.profile,
+        wallet: user.wallet,
+        isCreator: !!user.creator,
+      },
+    });
+  } catch (error: any) {
+    console.error('[AUTH] Firebase sync error:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * Verify Current Session & Profile Status
  * GET /api/v1/auth/me
  */

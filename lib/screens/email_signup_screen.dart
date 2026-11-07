@@ -6,6 +6,8 @@ import 'package:version1/screens/home_screen.dart';
 import 'package:version1/screens/phone_auth_screen.dart';
 import 'package:version1/screens/profile_setup_screen.dart';
 import 'package:version1/screens/signup_screen.dart';
+import 'package:version1/screens/login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:version1/services/api_service.dart';
 import 'package:version1/services/app_state.dart';
 
@@ -42,90 +44,109 @@ class _EmailSignUpScreenState extends State<EmailSignUpScreen> {
         final password = _passwordController.text;
         final name = _nameController.text.trim();
 
-        final res = await ApiService.instance.registerEmail(
+        // 1. Create User in Firebase Authentication
+        final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: email,
           password: password,
-          name: name.isNotEmpty ? name : null,
         );
 
-        if (!mounted) return;
-
-        if (res['success'] != true || res['token'] == null) {
-          setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFD32F2F),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              content: Text(
-                res['error']?.toString() ?? 'Registration failed. Please try again.',
-                style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-              ),
-            ),
-          );
-          return;
+        final fbUser = cred.user;
+        if (fbUser != null) {
+          if (name.isNotEmpty) {
+            await fbUser.updateDisplayName(name);
+          }
+          // 2. Send Real Email Verification Link!
+          await fbUser.sendEmailVerification();
         }
-
-        final token = res['token'].toString();
-        final userId = res['user']?['id']?.toString() ?? '';
-        final profile = res['user']?['profile'] as Map<String, dynamic>?;
-        final bool isProfileCompleted = res['isProfileCompleted'] == true ||
-            (profile != null && profile['isCompleted'] == true);
-
-        await AppState.instance.saveUserSession(
-          token: token,
-          userId: userId,
-          isProfileCompleted: isProfileCompleted,
-          email: email,
-          name: name,
-          profile: profile,
-        );
 
         if (!mounted) return;
         setState(() => _isLoading = false);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF00A896),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            content: Row(
-              children: const [
-                Icon(Icons.check_circle_rounded, color: Colors.white),
+        // 3. Show Verification Popup to inform user
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            title: const Row(
+              children: [
+                Icon(Icons.mark_email_read_rounded, color: Color(0xFF00A896), size: 28),
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Account created successfully! Welcome to LinkUp.',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                    'Verify Your Email',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                 ),
               ],
             ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'We sent a verification link to:\n',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 14, color: const Color(0xFF4A6B74)),
+                ),
+                Text(
+                  email,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF007A78),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Please open your email inbox (or spam) and click the verification link before logging in.',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFF64748B), height: 1.4),
+                ),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF007A78),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                },
+                child: const Text('Go to Login', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
         );
-
-        if (!isProfileCompleted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
-            (route) => false,
-          );
-        } else {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-            (route) => false,
-          );
+      } on FirebaseAuthException catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        String msg = e.message ?? 'Registration failed';
+        if (e.code == 'email-already-in-use') {
+          msg = 'An account with this email already exists. Please login instead.';
+        } else if (e.code == 'weak-password') {
+          msg = 'The password provided is too weak. Please use at least 6 characters.';
+        } else if (e.code == 'invalid-email') {
+          msg = 'Please enter a valid email address.';
         }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFD32F2F),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
+          ),
+        );
       } catch (e) {
         if (!mounted) return;
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFD32F2F),
-            content: Text('Registration error: $e'),
+            content: Text('Sign up error: $e'),
           ),
         );
       }

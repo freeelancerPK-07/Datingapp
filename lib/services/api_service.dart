@@ -168,6 +168,32 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> syncFirebaseUser({
+    required String email,
+    String? name,
+    String? avatarUrl,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/firebase-sync'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          if (name != null && name.isNotEmpty) 'name': name,
+          if (avatarUrl != null && avatarUrl.isNotEmpty) 'avatarUrl': avatarUrl,
+        }),
+      );
+      final data = jsonDecode(res.body);
+      if (data['success'] == true && data['token'] != null) {
+        setAuthToken(data['token'].toString());
+      }
+      return data;
+    } catch (e) {
+      debugPrint('[ApiService] Firebase sync error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> getMe({String? userId}) async {
     try {
       final uri = Uri.parse('$baseUrl/auth/me${userId != null ? '?userId=$userId' : ''}');

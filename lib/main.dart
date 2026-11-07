@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:version1/screens/splash_screen.dart';
 import 'package:version1/services/app_state.dart';
 import 'package:version1/services/navigation_service.dart';
 import 'package:version1/widgets/incoming_call_overlay.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase init error: $e');
+  }
   runApp(const LinkUpApp());
 }
 
