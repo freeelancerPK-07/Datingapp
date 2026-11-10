@@ -37,8 +37,13 @@ class ApiService {
     return productionUrl;
   }
 
-  /// Automatically probes backend on app startup (supports Production Cloud, Physical Phone, and Emulator)
+  /// Automatically probes backend on app startup (Release APK always uses Production Cloud)
   Future<void> probeBackendUrl() async {
+    if (kReleaseMode) {
+      _resolvedBaseUrl = productionUrl;
+      debugPrint('[ApiService] Release build locked to production: $productionUrl');
+      return;
+    }
     final candidates = [
       productionUrl,                      // Live Production Cloud Backend (Render)
       'http://10.186.14.158:5000/api/v1', // Physical phone on Wi-Fi (Host PC IP)
@@ -347,6 +352,20 @@ class ApiService {
       debugPrint('[ApiService] End call error: $e');
       return {'success': false, 'error': e.toString()};
     }
+  }
+
+  Future<Map<String, dynamic>?> getIceServers() async {
+    try {
+      final res = await http
+          .get(Uri.parse('$baseUrl/calls/ice-servers'), headers: _headers)
+          .timeout(const Duration(seconds: 3));
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getIceServers error: $e');
+    }
+    return null;
   }
 
   // ---------------------------------------------------------------------------

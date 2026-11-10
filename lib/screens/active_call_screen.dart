@@ -340,6 +340,19 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
+                                const SizedBox(height: 6),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  child: Text(
+                                    _webrtc?.connectionStatus ?? 'Initializing...',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: Colors.white70,
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -595,8 +608,9 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                       ),
                     ),
 
-                  // Low Balance Warning Banner (balance < 1 min, Recharge without call cut)
-                  AnimatedBuilder(
+                  // Low Balance Warning Banner (caller only, balance < 1 min, Recharge without call cut)
+                  if (widget.isCaller)
+                    AnimatedBuilder(
                     animation: AppState.instance,
                     builder: (context, _) {
                       final balance = AppState.instance.diamondBalance;
