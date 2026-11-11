@@ -5,14 +5,11 @@ import 'package:version1/constants/app_icon_base64.dart';
 import 'package:version1/screens/email_signup_screen.dart';
 import 'package:version1/screens/home_screen.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:version1/constants/svg_assets.dart';
 import 'package:version1/screens/login_screen.dart';
 import 'package:version1/screens/phone_auth_screen.dart';
 import 'package:version1/screens/profile_setup_screen.dart';
-import 'package:version1/services/api_service.dart';
-import 'package:version1/services/app_state.dart';
+import 'package:version1/services/auth_service.dart';
  
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -31,91 +28,37 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _handleGoogleSignIn() async {
-    try {
-      await GoogleSignIn.instance.initialize(
-        serverClientId: '675437277662-rpqvkgpfa9oruutealq8c65hhjqpg62t.apps.googleusercontent.com',
-      );
-      final account = await GoogleSignIn.instance.authenticate();
-      final idToken = account.authentication.idToken;
-      final credential = GoogleAuthProvider.credential(idToken: idToken);
+    final result = await AuthService.instance.signInWithGoogle();
+    if (!mounted) return;
+    if (result.cancelled) return;
 
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-      final fbUser = userCredential.user;
-
-      if (fbUser == null || fbUser.email == null || fbUser.email!.isEmpty) {
-        throw Exception('Unable to retrieve verified email from Google.');
-      }
-
-      // Sync verified Google user with Supabase DB through Render Backend
-      final res = await ApiService.instance.syncFirebaseUser(
-        email: fbUser.email!,
-        name: fbUser.displayName ?? account.displayName,
-        avatarUrl: fbUser.photoURL ?? account.photoUrl,
-      );
-
-      if (!mounted) return;
-
-      if (res['success'] != true || res['token'] == null) {
-        throw Exception(res['error'] ?? 'Backend synchronization failed');
-      }
-
-      final token = res['token'].toString();
-      final userId = res['user']?['id']?.toString() ?? '';
-      final profile = res['user']?['profile'] as Map<String, dynamic>?;
-      final bool isProfileCompleted = res['isProfileCompleted'] == true ||
-          (profile != null && profile['isCompleted'] == true);
-
-      await AppState.instance.saveUserSession(
-        token: token,
-        userId: userId,
-        isProfileCompleted: isProfileCompleted,
-        email: fbUser.email!,
-        name: fbUser.displayName ?? account.displayName,
-        profile: profile,
-      );
-
-      if (!mounted) return;
-
+    if (!result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFF007A78),
+          backgroundColor: const Color(0xFFD32F2F),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          content: Text('Signed in as ${fbUser.displayName ?? fbUser.email}!'),
+          content: Text(result.errorMessage ?? 'Google Sign-In failed'),
         ),
       );
-
-      if (!isProfileCompleted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
-          (route) => false,
-        );
-      } else {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-        );
-      }
-    } on GoogleSignInException catch (e) {
-      if (!mounted) return;
-      if (e.code == GoogleSignInExceptionCode.canceled) {
-        return; // User canceled sign-in quietly
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFD32F2F),
-          content: Text('Google Sign-In: ${e.description ?? e.code.name}'),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFD32F2F),
-          content: Text('Google Sign-In error: $e'),
-        ),
-      );
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF007A78),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        content: Text('Signed in as ${result.displayName ?? result.email}!'),
+      ),
+    );
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => result.isProfileCompleted ? const HomeScreen() : const ProfileSetupScreen(),
+      ),
+      (route) => false,
+    );
   }
 
   @override

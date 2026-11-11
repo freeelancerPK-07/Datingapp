@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma.js';
 import { sendRealOtpSms } from '../services/sms.service.js';
+import { isFirebaseAdminConfigured, verifyFirebaseIdToken } from '../lib/firebaseAdmin.js';
 
 export const authRouter = Router();
 
@@ -278,18 +279,37 @@ authRouter.post('/login', async (req, res) => {
  */
 authRouter.post('/firebase-sync', async (req, res) => {
   try {
-    const { email, name, avatarUrl } = req.body;
-    if (!email) {
+    const { email, name, avatarUrl, idToken } = req.body;
+    let verifiedEmail = email ? String(email).trim().toLowerCase() : '';
+    let verifiedName = name ? String(name).trim() : '';
+    let verifiedAvatar = avatarUrl ? String(avatarUrl).trim() : '';
+
+    if (idToken && isFirebaseAdminConfigured()) {
+      const decoded = await verifyFirebaseIdToken(String(idToken));
+      if (!decoded || !decoded.email) {
+        return res.status(401).json({ success: false, error: 'Invalid or expired Firebase ID token' });
+      }
+      verifiedEmail = decoded.email.trim().toLowerCase();
+      if (!verifiedName && decoded.name) verifiedName = String(decoded.name);
+      if (!verifiedAvatar && decoded.picture) verifiedAvatar = String(decoded.picture);
+    }
+
+    if (!verifiedEmail) {
       return res.status(400).json({ success: false, error: 'Email is required for Firebase sync' });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-
     // Check if user already exists
     let user = await prisma.user.findFirst({
-      where: { email: normalizedEmail },
+      where: { email: verifiedEmail },
       include: { profile: true, wallet: true, creator: true },
     });
+
+    if (user && !user.isActive) {
+      return res.status(403).json({
+        success: false,
+        error: 'Your account has been suspended by an administrator.',
+      });
+    }
 
     let isNewUser = false;
 
@@ -297,12 +317,12 @@ authRouter.post('/firebase-sync', async (req, res) => {
       isNewUser = true;
       user = await prisma.user.create({
         data: {
-          email: normalizedEmail,
+          email: verifiedEmail,
           isVerified: true,
           profile: {
             create: {
-              name: name?.trim() || 'LinkUp User',
-              avatarUrl: avatarUrl || '',
+              name: verifiedName || 'LinkUp User',
+              avatarUrl: verifiedAvatar || '',
               isCompleted: false,
               currentStep: 1,
             },

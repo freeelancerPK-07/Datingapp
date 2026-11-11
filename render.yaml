@@ -24,6 +24,8 @@ services:
         sync: false
       - key: AGORA_APP_CERTIFICATE
         sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
       - key: FAST2SMS_API_KEY
         sync: false
 

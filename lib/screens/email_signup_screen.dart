@@ -6,9 +6,7 @@ import 'package:version1/screens/home_screen.dart';
 import 'package:version1/screens/profile_setup_screen.dart';
 import 'package:version1/screens/phone_auth_screen.dart';
 import 'package:version1/screens/signup_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:version1/services/api_service.dart';
-import 'package:version1/services/app_state.dart';
+import 'package:version1/services/auth_service.dart';
 
 /// Full-Page Email Sign Up Screen matching LinkUp Account Creation design
 class EmailSignUpScreen extends StatefulWidget {
@@ -36,103 +34,47 @@ class _EmailSignUpScreenState extends State<EmailSignUpScreen> {
   }
 
   Future<void> _handleSignUp() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      setState(() => _isLoading = true);
-      try {
-        final email = _emailController.text.trim();
-        final password = _passwordController.text;
-        final name = _nameController.text.trim();
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _isLoading = true);
 
-        // 1. Create User in Firebase Authentication directly
-        final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
+    final result = await AuthService.instance.signUpWithEmail(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      name: _nameController.text.trim(),
+    );
 
-        final fbUser = cred.user;
-        if (fbUser != null && name.isNotEmpty) {
-          await fbUser.updateDisplayName(name);
-        }
+    if (!mounted) return;
+    setState(() => _isLoading = false);
 
-        // 2. Direct Sync with Supabase PostgreSQL via Render Backend
-        final res = await ApiService.instance.syncFirebaseUser(
-          email: email,
-          name: name.isNotEmpty ? name : null,
-        );
-
-        if (!mounted) return;
-
-        if (res['success'] != true || res['token'] == null) {
-          throw Exception(res['error'] ?? 'Backend synchronization failed');
-        }
-
-        final token = res['token'].toString();
-        final userId = res['user']?['id']?.toString() ?? '';
-        final profile = res['user']?['profile'] as Map<String, dynamic>?;
-        final bool isProfileCompleted = res['isProfileCompleted'] == true ||
-            (profile != null && profile['isCompleted'] == true);
-
-        await AppState.instance.saveUserSession(
-          token: token,
-          userId: userId,
-          isProfileCompleted: isProfileCompleted,
-          email: email,
-          name: name,
-          profile: profile,
-        );
-
-        if (!mounted) return;
-        setState(() => _isLoading = false);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Color(0xFF00A896),
-            behavior: SnackBarBehavior.floating,
-            content: Text('Account created successfully! Welcome to LinkUp.'),
+    if (!result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFD32F2F),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          content: Text(
+            result.errorMessage ?? 'Sign up failed. Please try again.',
+            style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
           ),
-        );
-
-        if (!isProfileCompleted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
-            (route) => false,
-          );
-        } else {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-            (route) => false,
-          );
-        }
-      } on FirebaseAuthException catch (e) {
-        if (!mounted) return;
-        setState(() => _isLoading = false);
-        String msg = e.message ?? 'Registration failed';
-        if (e.code == 'email-already-in-use') {
-          msg = 'An account with this email already exists. Please login instead.';
-        } else if (e.code == 'weak-password') {
-          msg = 'The password provided is too weak. Please use at least 6 characters.';
-        } else if (e.code == 'invalid-email') {
-          msg = 'Please enter a valid email address.';
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFD32F2F),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-          ),
-        );
-      } catch (e) {
-        if (!mounted) return;
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFD32F2F),
-            content: Text('Sign up error: $e'),
-          ),
-        );
-      }
+        ),
+      );
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: Color(0xFF00A896),
+        behavior: SnackBarBehavior.floating,
+        content: Text('Account created successfully! Welcome to LinkUp.'),
+      ),
+    );
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => result.isProfileCompleted ? const HomeScreen() : const ProfileSetupScreen(),
+      ),
+      (route) => false,
+    );
   }
 
   @override

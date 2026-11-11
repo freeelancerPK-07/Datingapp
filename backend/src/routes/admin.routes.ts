@@ -631,19 +631,23 @@ adminRouter.put('/users/:userId/toggle-status', async (req, res) => {
 
 /**
  * DELETE /api/v1/admin/users/:userId
- * Admin permanently deletes a user or creator account from PostgreSQL
+ * Admin permanently deletes a user or creator account from Supabase PostgreSQL AND Firebase Auth
  */
 adminRouter.delete('/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const success = await deleteUserPermanently(userId);
-    if (!success) {
+    const result = await deleteUserPermanently(userId);
+    if (!result.success) {
       return res.status(404).json({ success: false, error: 'User not found in database' });
     }
 
     return res.json({
       success: true,
-      message: 'Account permanently purged from database and platform.',
+      firebaseDeleted: result.firebaseDeleted,
+      firebaseReason: result.firebaseReason,
+      message: result.firebaseDeleted
+        ? 'Account permanently deleted from Supabase PostgreSQL & Firebase Authentication.'
+        : `Account deleted from Supabase PostgreSQL (Firebase status: ${result.firebaseReason || 'not linked'}).`,
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });

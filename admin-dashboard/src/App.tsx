@@ -424,7 +424,8 @@ export default function App() {
       });
       const data = await res.json();
       if (data.success) {
-        showToast(`Account "${deletingUser.name}" permanently deleted from DB & platform.`);
+        const fbStatus = data.firebaseDeleted ? 'Supabase & Firebase Auth' : 'Supabase DB';
+        showToast(`Account "${deletingUser.name}" deleted from ${fbStatus}.`);
         setDeletingUser(null);
         loadDashboardData();
       } else {

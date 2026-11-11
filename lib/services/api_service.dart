@@ -177,17 +177,21 @@ class ApiService {
     required String email,
     String? name,
     String? avatarUrl,
+    String? idToken,
   }) async {
     try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/auth/firebase-sync'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          if (name != null && name.isNotEmpty) 'name': name,
-          if (avatarUrl != null && avatarUrl.isNotEmpty) 'avatarUrl': avatarUrl,
-        }),
-      );
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/firebase-sync'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': email,
+              if (name != null && name.isNotEmpty) 'name': name,
+              if (avatarUrl != null && avatarUrl.isNotEmpty) 'avatarUrl': avatarUrl,
+              if (idToken != null && idToken.isNotEmpty) 'idToken': idToken,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
       final data = jsonDecode(res.body);
       if (data['success'] == true && data['token'] != null) {
         setAuthToken(data['token'].toString());

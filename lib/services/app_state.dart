@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:version1/models/admin_settings_model.dart';
 import 'package:version1/models/call_record_model.dart';
 import 'package:version1/models/creator_model.dart';
@@ -24,7 +26,6 @@ class AppState extends ChangeNotifier {
   static final AppState instance = AppState._internal();
   factory AppState() => instance;
   AppState._internal() {
-    _initSampleCreators();
     syncCreatorsFromBackend();
     startIncomingCallListener();
   }
@@ -164,7 +165,16 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    _incomingCallPollTimer?.cancel();
+    _incomingCall = null;
     _backendUserId = null;
+    _isCreator = false;
+    _userName = '';
+    _userPhone = '';
+    _userCity = '';
+    _userBio = '';
+    _availableCoins = 0;
+    _lockedCoins = 0;
     _userProfile = const UserProfile(
       name: '',
       photoUrl: '',
@@ -179,6 +189,12 @@ class AppState extends ChangeNotifier {
       currentStep: 1,
     );
     ApiService.instance.clearAuthToken();
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
+    try {
+      await GoogleSignIn().signOut();
+    } catch (_) {}
     try {
       await _storage.deleteAll();
     } catch (_) {}
@@ -636,10 +652,6 @@ class AppState extends ChangeNotifier {
     } catch (_) {
       return null;
     }
-  }
-
-  void _initSampleCreators() {
-    // Only real creators fetched from backend PostgreSQL are loaded
   }
 
   // ---------------------------------------------------------------------------

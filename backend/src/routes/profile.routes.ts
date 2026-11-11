@@ -117,14 +117,16 @@ profileRouter.delete('/delete-account', async (req, res) => {
       return res.status(400).json({ success: false, error: 'userId is required' });
     }
 
-    const success = await deleteUserPermanently(String(userId));
-    if (!success) {
+    const result = await deleteUserPermanently(String(userId));
+    if (!result.success) {
       return res.status(404).json({ success: false, error: 'User not found in database' });
     }
 
     return res.json({
       success: true,
-      message: 'Your account and all associated data have been permanently deleted from database.',
+      firebaseDeleted: result.firebaseDeleted,
+      firebaseReason: result.firebaseReason,
+      message: 'Your account and all associated data have been permanently deleted from database and Firebase.',
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });

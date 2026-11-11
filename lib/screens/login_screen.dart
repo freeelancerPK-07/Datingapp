@@ -2,15 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:version1/constants/app_icon_base64.dart';
 import 'package:version1/constants/svg_assets.dart';
 import 'package:version1/screens/home_screen.dart';
 import 'package:version1/screens/profile_setup_screen.dart';
 import 'package:version1/screens/signup_screen.dart';
-import 'package:version1/services/api_service.dart';
-import 'package:version1/services/app_state.dart';
+import 'package:version1/services/auth_service.dart';
 
 /// Pixel-Perfect Login Screen matching LinkUp Mint/Teal theme reference
 class LoginScreen extends StatefulWidget {
@@ -37,214 +34,95 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      setState(() => _isLoading = true);
-      try {
-        final email = _emailController.text.trim();
-        final password = _passwordController.text;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _isLoading = true);
 
-        Map<String, dynamic>? res;
+    final result = await AuthService.instance.signInWithEmail(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
 
-        // 1. Try Firebase Authentication with Email and Password directly
-        try {
-          final userCred = await FirebaseAuth.instance.signInWithEmailAndPassword(
-            email: email,
-            password: password,
-          );
-          final fbUser = userCred.user;
+    if (!mounted) return;
+    setState(() => _isLoading = false);
 
-          if (fbUser != null && fbUser.email != null) {
-            res = await ApiService.instance.syncFirebaseUser(
-              email: fbUser.email!,
-              name: fbUser.displayName,
-              avatarUrl: fbUser.photoURL,
-            );
-          }
-        } on FirebaseAuthException catch (fbErr) {
-          debugPrint('[Login] Firebase auth error: ${fbErr.code} - ${fbErr.message}');
-        }
-
-        // 2. Fallback to direct backend login if user was registered on backend directly
-        res ??= await ApiService.instance.loginEmail(
-          email: email,
-          password: password,
-        );
-
-        if (!mounted) return;
-
-        if (res['success'] != true || res['token'] == null) {
-          setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFD32F2F),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              content: Text(
-                res['error']?.toString() ?? 'Invalid email or password. Please try again.',
-                style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-              ),
-            ),
-          );
-          return;
-        }
-
-        final token = res['token'].toString();
-        final userId = res['user']?['id']?.toString() ?? '';
-        final profile = res['user']?['profile'] as Map<String, dynamic>?;
-        final bool isProfileCompleted = res['isProfileCompleted'] == true ||
-            (profile != null && profile['isCompleted'] == true);
-
-        await AppState.instance.saveUserSession(
-          token: token,
-          userId: userId,
-          isProfileCompleted: isProfileCompleted,
-          email: email,
-          name: profile?['name']?.toString(),
-          phone: res['user']?['phone']?.toString(),
-          profile: profile,
-        );
-
-        if (!mounted) return;
-        setState(() => _isLoading = false);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF007A78),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: Colors.white),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Welcome back! Logged in successfully.',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
+    if (!result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFD32F2F),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          content: Text(
+            result.errorMessage ?? 'Invalid email or password. Please try again.',
+            style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
           ),
-        );
-
-        if (!isProfileCompleted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
-            (route) => false,
-          );
-        } else {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-            (route) => false,
-          );
-        }
-      } catch (e) {
-        if (!mounted) return;
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFD32F2F),
-            content: Text('Login error: $e'),
-          ),
-        );
-      }
+        ),
+      );
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF007A78),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        content: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.white),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Welcome back! Logged in successfully.',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => result.isProfileCompleted ? const HomeScreen() : const ProfileSetupScreen(),
+      ),
+      (route) => false,
+    );
   }
 
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
-    try {
-      await GoogleSignIn.instance.initialize(
-        serverClientId: '675437277662-rpqvkgpfa9oruutealq8c65hhjqpg62t.apps.googleusercontent.com',
-      );
-      final account = await GoogleSignIn.instance.authenticate();
-      final idToken = account.authentication.idToken;
-      final credential = GoogleAuthProvider.credential(idToken: idToken);
+    final result = await AuthService.instance.signInWithGoogle();
+    if (!mounted) return;
+    setState(() => _isLoading = false);
 
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-      final fbUser = userCredential.user;
+    if (result.cancelled) return;
 
-      if (fbUser == null || fbUser.email == null || fbUser.email!.isEmpty) {
-        throw Exception('Unable to retrieve verified email from Google.');
-      }
-
-      // Sync verified Google user with Supabase DB through Render Backend
-      final res = await ApiService.instance.syncFirebaseUser(
-        email: fbUser.email!,
-        name: fbUser.displayName ?? account.displayName,
-        avatarUrl: fbUser.photoURL ?? account.photoUrl,
-      );
-
-      if (!mounted) return;
-
-      if (res['success'] != true || res['token'] == null) {
-        throw Exception(res['error'] ?? 'Backend synchronization failed');
-      }
-
-      final token = res['token'].toString();
-      final userId = res['user']?['id']?.toString() ?? '';
-      final profile = res['user']?['profile'] as Map<String, dynamic>?;
-      final bool isProfileCompleted = res['isProfileCompleted'] == true ||
-          (profile != null && profile['isCompleted'] == true);
-
-      await AppState.instance.saveUserSession(
-        token: token,
-        userId: userId,
-        isProfileCompleted: isProfileCompleted,
-        email: fbUser.email!,
-        name: fbUser.displayName ?? account.displayName,
-        profile: profile,
-      );
-
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
+    if (!result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFF007A78),
+          backgroundColor: const Color(0xFFD32F2F),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          content: Text('Signed in as ${fbUser.displayName ?? fbUser.email}!'),
+          content: Text(result.errorMessage ?? 'Google Sign-In failed'),
         ),
       );
-
-      if (!isProfileCompleted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
-          (route) => false,
-        );
-      } else {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-        );
-      }
-    } on GoogleSignInException catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      if (e.code == GoogleSignInExceptionCode.canceled) {
-        return; // User canceled sign-in quietly
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFD32F2F),
-          content: Text('Google Sign-In: ${e.description ?? e.code.name}'),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFD32F2F),
-          content: Text('Google Sign-In error: $e'),
-        ),
-      );
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF007A78),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        content: Text('Signed in as ${result.displayName ?? result.email}!'),
+      ),
+    );
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => result.isProfileCompleted ? const HomeScreen() : const ProfileSetupScreen(),
+      ),
+      (route) => false,
+    );
   }
 
   void _showForgotPasswordSheet() {
@@ -320,12 +198,16 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 20),
               GestureDetector(
-                onTap: () {
+                onTap: () async {
+                  final targetEmail = resetController.text.trim();
+                  if (targetEmail.isEmpty) return;
+                  final messenger = ScaffoldMessenger.of(this.context);
                   Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      backgroundColor: Color(0xFF007A78),
-                      content: Text('Password reset link sent to your email.'),
+                  final err = await AuthService.instance.sendPasswordReset(targetEmail);
+                  messenger.showSnackBar(
+                    SnackBar(
+                      backgroundColor: err == null ? const Color(0xFF007A78) : const Color(0xFFD32F2F),
+                      content: Text(err ?? 'Password reset link sent to $targetEmail.'),
                     ),
                   );
                 },

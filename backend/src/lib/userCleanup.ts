@@ -1,25 +1,30 @@
 import { prisma } from './prisma.js';
+import { deleteFirebaseUser } from './firebaseAdmin.js';
+
+export interface DeleteUserResult {
+  success: boolean;
+  firebaseDeleted: boolean;
+  firebaseReason?: string;
+}
 
 /**
- * Permanently and atomically deletes a user and all related records from PostgreSQL.
- * Wipes ChatMessages, CallSessions, CreatorApplications, Creator, WalletTransactions,
- * Wallet, UserProfile, and User.
+ * Permanently and atomically deletes a user and all related records from
+ * Supabase PostgreSQL AND Firebase Authentication.
  */
-export async function deleteUserPermanently(userId: string): Promise<boolean> {
+export async function deleteUserPermanently(userId: string): Promise<DeleteUserResult> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { creator: true, wallet: true },
   });
 
   if (!user) {
-    return false;
+    return { success: false, firebaseDeleted: false, firebaseReason: 'user-not-found' };
   }
 
   const creatorId = user.creator?.id;
   const walletId = user.wallet?.id;
 
   await prisma.$transaction(async (tx) => {
-    // 1. Delete all ChatMessages where user was sender OR receiver
     await tx.chatMessage.deleteMany({
       where: {
         OR: [
@@ -29,7 +34,6 @@ export async function deleteUserPermanently(userId: string): Promise<boolean> {
       },
     });
 
-    // 2. Delete all CallSessions where user was caller OR creator
     const callWhereOr: any[] = [{ callerId: userId }];
     if (creatorId) {
       callWhereOr.push({ creatorId });
@@ -40,41 +44,48 @@ export async function deleteUserPermanently(userId: string): Promise<boolean> {
       },
     });
 
-    // 3. Delete all CreatorApplications
     await tx.creatorApplication.deleteMany({
       where: { userId },
     });
 
-    // 4. Delete Creator record
     if (creatorId) {
       await tx.creator.deleteMany({
         where: { id: creatorId },
       });
     }
 
-    // 5. Delete WalletTransactions
     if (walletId) {
       await tx.walletTransaction.deleteMany({
         where: { walletId },
       });
     }
 
-    // 6. Delete Wallet
     await tx.wallet.deleteMany({
       where: { userId },
     });
 
-    // 7. Delete UserProfile
     await tx.userProfile.deleteMany({
       where: { userId },
     });
 
-    // 8. Delete User
     await tx.user.delete({
       where: { id: userId },
     });
   });
 
-  console.log(`[USER_CLEANUP] Successfully purged user ${userId} permanently from DB.`);
-  return true;
+  // Sync deletion to Firebase Authentication
+  const fbRes = await deleteFirebaseUser({
+    email: user.email,
+    phone: user.phone,
+  });
+
+  console.log(
+    `[USER_CLEANUP] Purged user ${userId} from Supabase PostgreSQL. Firebase Auth deleted=${fbRes.deleted} (${fbRes.reason})`
+  );
+
+  return {
+    success: true,
+    firebaseDeleted: fbRes.deleted,
+    firebaseReason: fbRes.reason,
+  };
 }
