@@ -354,20 +354,6 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>?> getIceServers() async {
-    try {
-      final res = await http
-          .get(Uri.parse('$baseUrl/calls/ice-servers'), headers: _headers)
-          .timeout(const Duration(seconds: 3));
-      if (res.statusCode == 200) {
-        return jsonDecode(res.body) as Map<String, dynamic>;
-      }
-    } catch (e) {
-      debugPrint('[ApiService] getIceServers error: $e');
-    }
-    return null;
-  }
-
   Future<Map<String, dynamic>> getAgoraCallCredentials(String callId) async {
     try {
       final res = await http

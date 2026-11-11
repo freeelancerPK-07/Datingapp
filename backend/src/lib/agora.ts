@@ -1,25 +1,25 @@
 import pkg from 'agora-access-token';
 const { RtcTokenBuilder, RtcRole } = pkg as any;
 
-const PLACEHOLDER_APP_ID = '07c1a3f8e9fc43a09d9f186c48d556dc';
-const PLACEHOLDER_CERT = '44875f9999944d989c5259698b6f94f2';
+const DEFAULT_AGORA_APP_ID = '07c1a3f8e9fc43a09d9f186c48d556dc';
+const DEFAULT_AGORA_APP_CERTIFICATE = '44875f9999944d989c5259698b6f94f2';
 
 export function getAgoraConfig() {
-  const rawAppId = (process.env.AGORA_APP_ID || '').trim();
-  const rawCert = (process.env.AGORA_APP_CERTIFICATE || '').trim();
+  const envAppId = (process.env.AGORA_APP_ID || '').trim();
+  const envCert = (process.env.AGORA_APP_CERTIFICATE || '').trim();
 
-  const isConfigured = rawAppId.length > 0 && rawAppId !== PLACEHOLDER_APP_ID;
-  const hasCertificate = rawCert.length > 0 && rawCert !== PLACEHOLDER_CERT;
+  const appId = envAppId || DEFAULT_AGORA_APP_ID;
+  const appCertificate = envAppId ? envCert : (envCert || DEFAULT_AGORA_APP_CERTIFICATE);
 
   return {
-    appId: rawAppId,
-    appCertificate: hasCertificate ? rawCert : '',
-    isConfigured,
-    hasCertificate,
+    appId,
+    appCertificate,
+    isConfigured: appId.length > 0,
+    hasCertificate: appCertificate.length > 0,
   };
 }
 
-export const AGORA_APP_ID = (process.env.AGORA_APP_ID || '').trim();
+export const AGORA_APP_ID = (process.env.AGORA_APP_ID || DEFAULT_AGORA_APP_ID).trim();
 
 export interface AgoraCallTokens {
   appId: string;
@@ -32,8 +32,8 @@ export interface AgoraCallTokens {
 
 /**
  * Generates official Agora RTC token for a channel.
- * - If App Certificate is configured (Secured Mode): generates signed RTC token.
- * - If App Certificate is empty (Testing Mode - App ID only): returns empty string "" as Agora expects.
+ * - Secured Mode (App ID + Primary Certificate): generates signed RTC token.
+ * - Testing Mode (App ID only without Certificate): returns empty string "".
  */
 export function generateAgoraTokenForChannel(
   channelName: string,
