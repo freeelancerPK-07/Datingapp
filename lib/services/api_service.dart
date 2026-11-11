@@ -368,6 +368,18 @@ class ApiService {
     return null;
   }
 
+  Future<Map<String, dynamic>> getAgoraCallCredentials(String callId) async {
+    try {
+      final res = await http
+          .get(Uri.parse('$baseUrl/calls/$callId/agora-credentials'), headers: _headers)
+          .timeout(const Duration(seconds: 8));
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('[ApiService] getAgoraCallCredentials error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // 5. Profile Sync & Creator Registration
   // ---------------------------------------------------------------------------

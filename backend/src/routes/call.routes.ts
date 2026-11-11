@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
-import { generateAgoraTokens, AGORA_APP_ID } from '../lib/agora.js';
+import { generateAgoraTokens, generateAgoraTokenForChannel, getAgoraConfig } from '../lib/agora.js';
 
 export const callRouter = Router();
 
@@ -65,7 +65,7 @@ callRouter.post('/initiate', async (req, res) => {
     const safeCallerId = String(callerId).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
     const safeCreatorId = String(creatorId).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
     const agoraChannel = `call_${safeCallerId}_${safeCreatorId}_${Date.now()}`;
-    const tokens = generateAgoraTokens(agoraChannel, 0, 1, 7200);
+    const tokens = generateAgoraTokens(agoraChannel, 0, 0, 7200);
 
     // 5. Create CallSession in Database
     const callSession = await prisma.callSession.create({
@@ -223,6 +223,44 @@ callRouter.get('/ice-servers', async (_req, res) => {
     provider: 'stun-only',
     iceServers,
   });
+});
+
+/**
+ * GET /api/v1/calls/:id/agora-credentials
+ * Returns verified Agora App ID, Channel Name, and RTC Token for a live call session
+ */
+callRouter.get('/:id/agora-credentials', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const call = await prisma.callSession.findUnique({ where: { id } });
+
+    if (!call) {
+      return res.status(404).json({ success: false, error: 'Call session not found' });
+    }
+
+    const { appId, isConfigured, hasCertificate } = getAgoraConfig();
+    if (!isConfigured) {
+      return res.status(503).json({
+        success: false,
+        needsSetup: true,
+        error: 'Agora App ID not configured on Render server (add AGORA_APP_ID env variable).',
+      });
+    }
+
+    const channelName = call.agoraChannel || `linkup_call_${call.id}`;
+    const token = generateAgoraTokenForChannel(channelName, 0, 7200);
+
+    return res.json({
+      success: true,
+      appId,
+      channelName,
+      token,
+      uid: 0,
+      securedMode: hasCertificate,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 /**

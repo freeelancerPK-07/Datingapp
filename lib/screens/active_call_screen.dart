@@ -1,13 +1,13 @@
 import 'dart:async';
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/models/call_record_model.dart';
 import 'package:version1/models/creator_model.dart';
 import 'package:version1/screens/recharge_packages_sheet.dart';
+import 'package:version1/services/agora_call_service.dart';
 import 'package:version1/services/api_service.dart';
 import 'package:version1/services/app_state.dart';
-import 'package:version1/services/webrtc_service.dart';
 import 'package:version1/widgets/coin_icon.dart';
 
 enum NetworkQuality { strong, fair, weak }
@@ -40,7 +40,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
   late Timer _callCountdownTimer;
   late Timer _diamondDeductionTimer;
   Timer? _remoteStatusPollTimer;
-  WebRTCService? _webrtc;
+  AgoraCallService? _agora;
 
   // Call Controls State
   bool _isMuted = false;
@@ -75,13 +75,17 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
       }
     }
 
-    // Initialize WebRTC live camera & microphone
-    if (widget.isVideoCall && widget.callId != null) {
-      _webrtc = WebRTCService(callId: widget.callId!, isCaller: widget.isCaller);
-      _webrtc!.addListener(() {
+    // Initialize Agora live video/audio call engine
+    if (widget.callId != null) {
+      _agora = AgoraCallService(
+        callId: widget.callId!,
+        isCaller: widget.isCaller,
+        isVideoCall: widget.isVideoCall,
+      );
+      _agora!.addListener(() {
         if (mounted) setState(() {});
       });
-      _webrtc!.initialize();
+      _agora!.initialize();
     }
 
     // Live remote status poll (every 2s): ensures when one party hangs up, both screens end cleanly
@@ -179,7 +183,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
 
   @override
   void dispose() {
-    _webrtc?.dispose();
+    _agora?.dispose();
     _remoteStatusPollTimer?.cancel();
     _callCountdownTimer.cancel();
     _diamondDeductionTimer.cancel();
@@ -297,10 +301,11 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
           // 1. Background Video / Audio Feed
           Positioned.fill(
             child: _isVideoEnabled
-                ? (_webrtc != null && _webrtc!.remoteRenderer.srcObject != null
-                    ? RTCVideoView(
-                        _webrtc!.remoteRenderer,
-                        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                ? (_agora != null &&
+                        _agora!.remoteVideoController != null &&
+                        !_agora!.isRemoteVideoOff
+                    ? AgoraVideoView(
+                        controller: _agora!.remoteVideoController!,
                       )
                     : Stack(
                         fit: StackFit.expand,
@@ -344,7 +349,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 24),
                                   child: Text(
-                                    _webrtc?.connectionStatus ?? 'Initializing...',
+                                    _agora?.connectionStatus ?? 'Initializing...',
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.plusJakartaSans(
                                       color: Colors.white70,
@@ -711,11 +716,9 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        if (_webrtc != null && _webrtc!.localRenderer.srcObject != null)
-                          RTCVideoView(
-                            _webrtc!.localRenderer,
-                            mirror: _isFrontCamera,
-                            objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        if (_agora != null && _agora!.localVideoController != null && !_agora!.isVideoOff)
+                          AgoraVideoView(
+                            controller: _agora!.localVideoController!,
                           )
                         else
                           Container(
@@ -777,7 +780,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                     isActive: _isMuted,
                     onTap: () {
                       setState(() => _isMuted = !_isMuted);
-                      _webrtc?.toggleMute();
+                      _agora?.toggleMute();
                     },
                   ),
 
@@ -788,7 +791,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                     isActive: !_isVideoEnabled,
                     onTap: () {
                       setState(() => _isVideoEnabled = !_isVideoEnabled);
-                      _webrtc?.toggleVideo();
+                      _agora?.toggleVideo();
                     },
                   ),
 
@@ -800,7 +803,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                       isActive: false,
                       onTap: () {
                         setState(() => _isFrontCamera = !_isFrontCamera);
-                        _webrtc?.switchCamera();
+                        _agora?.switchCamera();
                       },
                     ),
 
@@ -809,7 +812,10 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                     icon: _isSpeakerOn ? Icons.volume_up_rounded : Icons.volume_down_rounded,
                     label: 'Speaker',
                     isActive: _isSpeakerOn,
-                    onTap: () => setState(() => _isSpeakerOn = !_isSpeakerOn),
+                    onTap: () {
+                      setState(() => _isSpeakerOn = !_isSpeakerOn);
+                      _agora?.setSpeakerphone(_isSpeakerOn);
+                    },
                   ),
 
                   // End Call (Vibrant Red)
