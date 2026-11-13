@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/screens/login_screen.dart';
-import 'package:version1/screens/no_internet_screen.dart';
 import 'package:version1/screens/signup_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -87,15 +86,7 @@ class WelcomeScreen extends StatelessWidget {
                   // Bottom Sleek Black Pill Button
                   GestureDetector(
                     key: const ValueKey('get_started_btn'),
-                    onTap: () async {
-                      final isOnline = await NoInternetScreen.hasInternet();
-                      if (!context.mounted) return;
-                      if (!isOnline) {
-                        Navigator.of(context).push(
-                          _createSmoothRoute(const NoInternetScreen(targetScreen: SignUpScreen())),
-                        );
-                        return;
-                      }
+                    onTap: () {
                       Navigator.of(context).push(
                         _createSmoothRoute(const SignUpScreen()),
                       );
@@ -133,15 +124,7 @@ class WelcomeScreen extends StatelessWidget {
                   // Bottom "Already have an account? Sign In" (Grey & Black)
                   GestureDetector(
                     key: const ValueKey('welcome_signin_btn'),
-                    onTap: () async {
-                      final isOnline = await NoInternetScreen.hasInternet();
-                      if (!context.mounted) return;
-                      if (!isOnline) {
-                        Navigator.of(context).push(
-                          _createSmoothRoute(const NoInternetScreen(targetScreen: LoginScreen())),
-                        );
-                        return;
-                      }
+                    onTap: () {
                       Navigator.of(context).push(
                         _createSmoothRoute(const LoginScreen()),
                       );

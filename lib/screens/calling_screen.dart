@@ -10,13 +10,13 @@ import 'package:version1/services/app_state.dart';
 class CallingScreen extends StatefulWidget {
   final CreatorModel creator;
   final bool isVideoCall;
-  final String callId;
+  final String? callId;
   final int durationMinutes;
 
   const CallingScreen({
     super.key,
     required this.creator,
-    required this.callId,
+    this.callId,
     this.isVideoCall = true,
     this.durationMinutes = 5,
   });
@@ -30,13 +30,16 @@ class _CallingScreenState extends State<CallingScreen>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   Timer? _statusPollTimer;
-  String _statusText = 'Calling...';
+  String? _activeCallId;
+  String _statusText = 'Connecting...';
   bool _isMuted = false;
   bool _isSpeaker = true;
 
   @override
   void initState() {
     super.initState();
+    _activeCallId = widget.callId;
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -46,21 +49,70 @@ class _CallingScreenState extends State<CallingScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // Phase 1: Calling (0 - 300ms) -> Phase 2: Ringing
-    Timer(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        setState(() => _statusText = 'Ringing...');
-      }
-    });
+    if (_activeCallId != null && _activeCallId!.isNotEmpty) {
+      // Pre-initiated call: start ringing immediately
+      Timer(const Duration(milliseconds: 250), () {
+        if (mounted) setState(() => _statusText = 'Ringing...');
+      });
+      _startStatusPolling();
+    } else {
+      // Auto-initiate call directly from this screen
+      _statusText = 'Connecting...';
+      _initiateCall();
+    }
+  }
 
-    // Real-time status poll every 300ms: when creator accepts, transitions to ActiveCallScreen instantly
-    _statusPollTimer = Timer.periodic(const Duration(milliseconds: 300), (timer) async {
-      if (!mounted) {
+  Future<void> _initiateCall() async {
+    try {
+      final res = await AppState.instance.initiateCallToCreator(
+        creatorId: widget.creator.id,
+        callType: widget.isVideoCall ? 'VIDEO' : 'VOICE',
+      );
+      if (!mounted) return;
+
+      if (res['success'] == true && res['callId'] != null) {
+        _activeCallId = res['callId'] as String;
+        setState(() => _statusText = 'Ringing...');
+        _startStatusPolling();
+      } else {
+        final err = res['error']?.toString() ?? 'Unable to connect call.';
+        setState(() => _statusText = 'Connection Failed');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(err, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+            backgroundColor: const Color(0xFFEF4444),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        Future.delayed(const Duration(milliseconds: 1800), () {
+          if (mounted) Navigator.of(context).pop();
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _statusText = 'Connection Error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+      Future.delayed(const Duration(milliseconds: 1800), () {
+        if (mounted) Navigator.of(context).pop();
+      });
+    }
+  }
+
+  void _startStatusPolling() {
+    if (_activeCallId == null) return;
+    _statusPollTimer?.cancel();
+    _statusPollTimer = Timer.periodic(const Duration(milliseconds: 350), (timer) async {
+      if (!mounted || _activeCallId == null) {
         timer.cancel();
         return;
       }
       try {
-        final res = await ApiService.instance.getCallStatus(widget.callId);
+        final res = await ApiService.instance.getCallStatus(_activeCallId!);
         if (res['success'] == true && res['data'] != null) {
           final status = res['data']['status'] as String?;
           if (status == 'CONNECTED') {
@@ -72,7 +124,7 @@ class _CallingScreenState extends State<CallingScreen>
                 builder: (_) => ActiveCallScreen(
                   creator: widget.creator,
                   isVideoCall: widget.isVideoCall,
-                  callId: widget.callId,
+                  callId: _activeCallId!,
                   isCaller: true,
                   initialDurationSeconds: widget.durationMinutes * 60,
                 ),
@@ -108,7 +160,9 @@ class _CallingScreenState extends State<CallingScreen>
 
   void _cancelCall() {
     _statusPollTimer?.cancel();
-    ApiService.instance.rejectCall(widget.callId, reason: 'USER_CANCELLED');
+    if (_activeCallId != null && _activeCallId!.isNotEmpty) {
+      ApiService.instance.rejectCall(_activeCallId!, reason: 'USER_CANCELLED');
+    }
 
     // Record cancelled/declined call in Call History
     AppState.instance.addCallRecord(
@@ -137,7 +191,7 @@ class _CallingScreenState extends State<CallingScreen>
         duration: const Duration(seconds: 2),
       ),
     );
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
   }
 
   @override

@@ -252,59 +252,16 @@ class _VideoCallsScreenState extends State<VideoCallsScreen> {
     );
   }
 
-  void _startLiveCall(CreatorModel creator, int durationMinutes) async {
-    final appState = AppState.instance;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF007A78)),
+  void _startLiveCall(CreatorModel creator, int durationMinutes) {
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (_) => CallingScreen(
+          creator: creator,
+          isVideoCall: true,
+          durationMinutes: durationMinutes,
+        ),
       ),
     );
-
-    try {
-      final res = await appState.initiateCallToCreator(
-        creatorId: creator.id,
-        callType: 'VIDEO',
-      );
-
-      if (mounted) Navigator.pop(context); // Dismiss loading dialog
-
-      if (res['success'] == true && res['callId'] != null) {
-        final callId = res['callId'] as String;
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CallingScreen(
-              creator: creator,
-              isVideoCall: true,
-              callId: callId,
-              durationMinutes: durationMinutes,
-            ),
-          ),
-        );
-      } else {
-        final err = res['error'] ?? 'Unable to connect call. Please try again.';
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(err),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) Navigator.pop(context);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to connect: $e'),
-          backgroundColor: const Color(0xFFEF4444),
-        ),
-      );
-    }
   }
 
   void _showInsufficientBalanceSheet(CreatorModel creator, int requiredCoins) {

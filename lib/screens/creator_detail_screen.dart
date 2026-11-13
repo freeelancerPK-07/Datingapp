@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/constants/svg_assets.dart';
 import 'package:version1/models/creator_model.dart';
 import 'package:version1/screens/calling_screen.dart';
-import 'package:version1/screens/chat_room_screen.dart';
 import 'package:version1/screens/recharge_packages_sheet.dart';
 import 'package:version1/services/app_state.dart';
 import 'package:version1/widgets/coin_icon.dart';
@@ -1118,106 +1117,58 @@ class _CreatorDetailScreenState extends State<CreatorDetailScreen> {
             ),
           ],
         ),
-        child: Row(
-          children: [
-            // Chat Action Button
-            SizedBox(
-              height: 52,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ChatRoomScreen(
-                        creator: widget.creator,
-                        conversationId: 'conv_${widget.creator.id}',
-                      ),
-                    ),
-                  );
-                },
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFFCEF1EB), width: 1.5),
-                  backgroundColor: const Color(0xFFF0FAF8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinkUpTheme.buttonGradient,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: LinkUpTheme.primaryTeal.withValues(alpha: 0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                icon: const Icon(
-                  Icons.chat_bubble_outline_rounded,
-                  color: LinkUpTheme.primaryTeal,
-                  size: 18,
-                ),
-                label: Text(
-                  'Chat',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: LinkUpTheme.primaryTeal,
-                  ),
+              ],
+            ),
+            child: ElevatedButton(
+              key: const ValueKey('video_call_btn'),
+              onPressed: () => _openBookingFlow(initialServiceId: 'video_call'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
-            ),
-
-            const SizedBox(width: 10),
-
-            // Book Video Call CTA Button
-            Expanded(
-              child: SizedBox(
-                height: 52,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinkUpTheme.buttonGradient,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: LinkUpTheme.primaryTeal.withValues(alpha: 0.35),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.bolt_rounded,
+                    color: Colors.white,
+                    size: 20,
                   ),
-                  child: ElevatedButton(
-                    key: const ValueKey('video_call_btn'),
-                    onPressed: () => _openBookingFlow(initialServiceId: 'video_call'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                  const SizedBox(width: 4),
+                  const CoinIcon(size: 14),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      'Book • 500 Coins',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.2,
                       ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.bolt_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 4),
-                        const CoinIcon(size: 14),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            'Book • 500 Coins',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: 0.2,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1364,76 +1315,22 @@ class _BookingFlowModalState extends State<_BookingFlowModal>
       _currentStep = 3; // Request Accepted!
     });
 
-    // Step 6: Session starts after 1.2s
-    Timer(const Duration(milliseconds: 1200), () async {
+    // Step 6: Session starts cleanly
+    Timer(const Duration(milliseconds: 600), () {
       if (!mounted) return;
+      final nav = Navigator.of(context, rootNavigator: true);
       Navigator.pop(context); // close bottom sheet
 
-      if (_selectedService.id == 'video_call' || _selectedService.id == 'voice_call') {
-        final isVideo = _selectedService.id == 'video_call';
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => const Center(
-            child: CircularProgressIndicator(color: Color(0xFF007A78)),
+      final isVideo = _selectedService.id != 'voice_call';
+      nav.push(
+        MaterialPageRoute(
+          builder: (_) => CallingScreen(
+            creator: widget.creator,
+            isVideoCall: isVideo,
+            durationMinutes: _selectedDuration?.minutes ?? 5,
           ),
-        );
-
-        try {
-          final res = await AppState.instance.initiateCallToCreator(
-            creatorId: widget.creator.id,
-            callType: isVideo ? 'VIDEO' : 'VOICE',
-          );
-          if (!mounted) return;
-          Navigator.pop(context); // dismiss loader
-
-          if (res['success'] == true && res['callId'] != null) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => CallingScreen(
-                  creator: widget.creator,
-                  isVideoCall: isVideo,
-                  callId: res['callId'] as String,
-                  durationMinutes: _selectedDuration?.minutes ?? 5,
-                ),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(res['error'] ?? 'Could not start call'),
-                backgroundColor: const Color(0xFFEF4444),
-              ),
-            );
-          }
-        } catch (e) {
-          if (!mounted) return;
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Call failed: $e'),
-              backgroundColor: const Color(0xFFEF4444),
-            ),
-          );
-        }
-      } else {
-        // Photo or Video Greeting -> Chat delivery room with settlement
-        AppState.instance.completeBookingSettlement(
-          serviceName: _selectedService.title,
-          amount: _currentPrice.toDouble(),
-        );
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ChatRoomScreen(
-              creator: widget.creator,
-              conversationId: 'conv_${widget.creator.id}',
-            ),
-          ),
-        );
-      }
+        ),
+      );
     });
   }
 

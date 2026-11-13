@@ -42,11 +42,12 @@ class AppState extends ChangeNotifier {
   // Real-time Incoming Call State
   Map<String, dynamic>? _incomingCall;
   Map<String, dynamic>? get incomingCall => _incomingCall;
+  final Set<String> _handledCallIds = {};
   Timer? _incomingCallPollTimer;
 
   void startIncomingCallListener() {
     _incomingCallPollTimer?.cancel();
-    _incomingCallPollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+    _incomingCallPollTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) async {
       final uid = _backendUserId;
       if (uid == null) return;
       try {
@@ -54,7 +55,11 @@ class AppState extends ChangeNotifier {
         if (res['success'] == true) {
           final inc = res['incomingCall'];
           if (inc != null) {
-            if (_incomingCall == null || _incomingCall!['callId'] != inc['callId']) {
+            final incId = inc['callId']?.toString() ?? '';
+            if (incId.isNotEmpty && _handledCallIds.contains(incId)) {
+              return;
+            }
+            if (_incomingCall == null || _incomingCall!['callId'] != incId) {
               _incomingCall = Map<String, dynamic>.from(inc);
               notifyListeners();
             }
@@ -67,7 +72,11 @@ class AppState extends ChangeNotifier {
     });
   }
 
-  void dismissIncomingCall() {
+  void dismissIncomingCall({String? callId}) {
+    final id = callId ?? _incomingCall?['callId']?.toString();
+    if (id != null && id.isNotEmpty) {
+      _handledCallIds.add(id);
+    }
     _incomingCall = null;
     notifyListeners();
   }
@@ -167,6 +176,7 @@ class AppState extends ChangeNotifier {
   Future<void> logout() async {
     _incomingCallPollTimer?.cancel();
     _incomingCall = null;
+    _handledCallIds.clear();
     _backendUserId = null;
     _isCreator = false;
     _userName = '';

@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:version1/constants/svg_assets.dart';
 import 'package:version1/models/creator_model.dart';
 import 'package:version1/screens/calling_screen.dart';
-import 'package:version1/screens/chat_room_screen.dart';
 import 'package:version1/screens/creator_detail_screen.dart';
 import 'package:version1/screens/recharge_packages_sheet.dart';
 import 'package:version1/services/app_state.dart';
@@ -31,19 +30,6 @@ class CreatorProfileSheet extends StatefulWidget {
 }
 
 class _CreatorProfileSheetState extends State<CreatorProfileSheet> {
-  void _handleChat() {
-    Navigator.of(context).pop();
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ChatRoomScreen(
-          creator: widget.creator,
-          conversationId: 'conv_${widget.creator.id}',
-        ),
-      ),
-    );
-  }
-
   void _handleVideoCall() async {
     final appState = AppState.instance;
     final check = appState.canStartVideoCall(widget.creator);
@@ -119,47 +105,18 @@ class _CreatorProfileSheetState extends State<CreatorProfileSheet> {
       return;
     }
 
-    // Launch real-time call flow via CallingScreen
+    // Launch real-time call flow via CallingScreen immediately
+    final nav = Navigator.of(context, rootNavigator: true);
     Navigator.of(context).pop();
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF007A78)),
+    nav.push(
+      MaterialPageRoute(
+        builder: (_) => CallingScreen(
+          creator: widget.creator,
+          isVideoCall: true,
+        ),
       ),
     );
-
-    try {
-      final res = await AppState.instance.initiateCallToCreator(
-        creatorId: widget.creator.id,
-        callType: 'VIDEO',
-      );
-      if (mounted) Navigator.pop(context);
-
-      if (res['success'] == true && res['callId'] != null) {
-        final callId = res['callId'] as String;
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CallingScreen(
-              creator: widget.creator,
-              isVideoCall: true,
-              callId: callId,
-            ),
-          ),
-        );
-      } else {
-        final err = res['error'] ?? 'Could not initiate call.';
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err), backgroundColor: const Color(0xFFEF4444)),
-        );
-      }
-    } catch (e) {
-      if (mounted) Navigator.pop(context);
-    }
   }
 
   @override
@@ -372,73 +329,34 @@ class _CreatorProfileSheetState extends State<CreatorProfileSheet> {
 
           const SizedBox(height: 14),
 
-          // Connection Entry Points (PRD Section 10)
-          Row(
-            children: [
-              // Chat Button
-              Expanded(
-                flex: 1,
-                child: SizedBox(
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    onPressed: _handleChat,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(26),
-                      ),
-                    ),
-                    icon: const Icon(
-                      Icons.chat_bubble_outline_rounded,
-                      color: Color(0xFF111111),
-                      size: 20,
-                    ),
-                    label: Text(
-                      'Chat',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF111111),
-                      ),
-                    ),
-                  ),
+          // Connection Entry Point: 1-on-1 Video Call
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              key: const ValueKey('video_call_btn'),
+              onPressed: _handleVideoCall,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: LinkUpTheme.activePink,
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(26),
                 ),
               ),
-
-              const SizedBox(width: 12),
-
-              // Video Call Button
-              Expanded(
-                flex: 2,
-                child: SizedBox(
-                  height: 52,
-                  child: ElevatedButton.icon(
-                    key: const ValueKey('video_call_btn'),
-                    onPressed: _handleVideoCall,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: LinkUpTheme.activePink,
-                      elevation: 3,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(26),
-                      ),
-                    ),
-                    icon: const Icon(
-                      Icons.videocam_rounded,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                    label: Text(
-                      'Video Call (${creator.diamondsPerMin})',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
+              icon: const Icon(
+                Icons.videocam_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
+              label: Text(
+                'Start Video Call • ${creator.diamondsPerMin} Diamonds/min',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
                 ),
               ),
-            ],
+            ),
           ),
         ],
       ),

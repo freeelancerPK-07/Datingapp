@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:version1/models/call_record_model.dart';
 import 'package:version1/models/creator_model.dart';
 import 'package:version1/screens/recharge_packages_sheet.dart';
@@ -52,8 +53,8 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
   NetworkQuality _networkQuality = NetworkQuality.strong;
   int _pingMs = 42;
 
-  // Draggable PIP coordinates (for Video Call self preview)
-  Offset _pipPosition = const Offset(20, 80);
+  // Draggable PIP coordinates (initialized cleanly below header on right side)
+  Offset? _pipPosition;
 
   // Pulse animations for Radar waves
   late AnimationController _pulseController;
@@ -293,6 +294,10 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    final topPadding = MediaQuery.of(context).padding.top;
+    final pipOffset = _pipPosition ?? Offset(screenSize.width - 126.0, topPadding + 92.0);
+    final isAgoraError = _agora?.hasError ?? false;
+    final isPermBlocked = _agora?.permissionDeniedPermanently ?? false;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -305,6 +310,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                         _agora!.remoteVideoController != null &&
                         !_agora!.isRemoteVideoOff
                     ? AgoraVideoView(
+                        key: ValueKey('remote_cam_${_agora!.remoteUid}'),
                         controller: _agora!.remoteVideoController!,
                       )
                     : Stack(
@@ -335,10 +341,17 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const CircularProgressIndicator(color: Color(0xFF007A78)),
+                                if (isAgoraError)
+                                  const Icon(Icons.videocam_off_rounded, color: Color(0xFFEF4444), size: 42)
+                                else
+                                  const CircularProgressIndicator(color: Color(0xFF007A78)),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'Connecting Live Camera...',
+                                  isAgoraError
+                                      ? 'Camera / Connection Issue'
+                                      : (_agora?.remoteUid == null
+                                          ? 'Waiting for ${widget.creator.name}...'
+                                          : 'Connecting Live Video...'),
                                   style: GoogleFonts.plusJakartaSans(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -347,7 +360,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                                 ),
                                 const SizedBox(height: 6),
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  padding: const EdgeInsets.symmetric(horizontal: 28),
                                   child: Text(
                                     _agora?.connectionStatus ?? 'Initializing...',
                                     textAlign: TextAlign.center,
@@ -358,6 +371,45 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                                     ),
                                   ),
                                 ),
+                                if (isAgoraError && _agora != null) ...[
+                                  const SizedBox(height: 16),
+                                  Wrap(
+                                    spacing: 10,
+                                    children: [
+                                      ElevatedButton.icon(
+                                        onPressed: () => _agora?.retryConnection(),
+                                        icon: const Icon(Icons.refresh_rounded, size: 18),
+                                        label: Text(
+                                          'Retry',
+                                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF007A78),
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                        ),
+                                      ),
+                                      if (isPermBlocked)
+                                        OutlinedButton.icon(
+                                          onPressed: () => openAppSettings(),
+                                          icon: const Icon(Icons.settings_rounded, size: 18),
+                                          label: Text(
+                                            'App Settings',
+                                            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+                                          ),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: Colors.white,
+                                            side: const BorderSide(color: Colors.white54),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -685,15 +737,15 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
           // 3. Draggable PIP Self-Preview (Video Call Only)
           if (_isVideoEnabled)
             Positioned(
-              left: _pipPosition.dx,
-              top: _pipPosition.dy,
+              left: pipOffset.dx,
+              top: pipOffset.dy,
               child: GestureDetector(
                 onPanUpdate: (details) {
                   setState(() {
-                    _pipPosition += details.delta;
+                    final next = pipOffset + details.delta;
                     _pipPosition = Offset(
-                      _pipPosition.dx.clamp(16.0, screenSize.width - 136.0),
-                      _pipPosition.dy.clamp(80.0, screenSize.height - 240.0),
+                      next.dx.clamp(16.0, screenSize.width - 126.0),
+                      next.dy.clamp(topPadding + 84.0, screenSize.height - 240.0),
                     );
                   });
                 },
@@ -718,7 +770,11 @@ class _ActiveCallScreenState extends State<ActiveCallScreen>
                       children: [
                         if (_agora != null && _agora!.localVideoController != null && !_agora!.isVideoOff)
                           AgoraVideoView(
+                            key: ValueKey('local_cam_${widget.callId}'),
                             controller: _agora!.localVideoController!,
+                            onAgoraVideoViewCreated: (_) {
+                              _agora?.ensureLocalPreviewStarted();
+                            },
                           )
                         else
                           Container(
