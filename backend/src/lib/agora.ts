@@ -9,7 +9,7 @@ export function getAgoraConfig() {
   const envCert = (process.env.AGORA_APP_CERTIFICATE || '').trim();
 
   const appId = envAppId || DEFAULT_AGORA_APP_ID;
-  const appCertificate = envAppId ? envCert : (envCert || DEFAULT_AGORA_APP_CERTIFICATE);
+  const appCertificate = envCert || DEFAULT_AGORA_APP_CERTIFICATE;
 
   return {
     appId,

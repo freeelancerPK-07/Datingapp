@@ -25,8 +25,13 @@ callRouter.post('/initiate', async (req, res) => {
     }
 
     // 2. Fetch Creator and verify availability
-    const creator = await prisma.creator.findUnique({
-      where: { id: creatorId },
+    const creator = await prisma.creator.findFirst({
+      where: {
+        OR: [
+          { id: String(creatorId) },
+          { userId: String(creatorId) },
+        ],
+      },
       include: { user: { include: { profile: true } } },
     });
 
@@ -106,25 +111,36 @@ callRouter.post('/initiate', async (req, res) => {
 callRouter.get('/incoming', async (req, res) => {
   try {
     const { userId, creatorId } = req.query;
-    if (!userId && !creatorId) {
+    const searchId = String(userId || creatorId || '').trim();
+    if (!searchId) {
       return res.status(400).json({ success: false, error: 'userId or creatorId is required' });
     }
 
-    let creator = null;
-    if (creatorId) {
-      creator = await prisma.creator.findUnique({ where: { id: String(creatorId) } });
-    } else if (userId) {
-      creator = await prisma.creator.findUnique({ where: { userId: String(userId) } });
+    let creator = await prisma.creator.findFirst({
+      where: {
+        OR: [
+          { id: searchId },
+          { userId: searchId },
+        ],
+      },
+    });
+
+    const cutoff = new Date(Date.now() - 120 * 1000); // 2 minute window for ringing
+    const candidateIds = [searchId];
+    if (creator) {
+      candidateIds.push(creator.id);
+      if (creator.userId) candidateIds.push(creator.userId);
+    }
+    if (creatorId && String(creatorId).trim()) {
+      candidateIds.push(String(creatorId).trim());
+    }
+    if (userId && String(userId).trim()) {
+      candidateIds.push(String(userId).trim());
     }
 
-    if (!creator) {
-      return res.json({ success: true, incomingCall: null });
-    }
-
-    const cutoff = new Date(Date.now() - 45 * 1000);
     const call = await prisma.callSession.findFirst({
       where: {
-        creatorId: creator.id,
+        creatorId: { in: candidateIds },
         status: { in: ['INITIATED', 'RINGING'] },
         createdAt: { gte: cutoff },
       },

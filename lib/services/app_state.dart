@@ -112,7 +112,7 @@ class AppState extends ChangeNotifier {
     Map<String, dynamic>? profile,
   }) async {
     _backendUserId = userId;
-    setProfileCompleted(isProfileCompleted);
+    setProfileCompleted(isProfileCompleted); 
     ApiService.instance.setAuthToken(token);
     startIncomingCallListener();
     if (name != null && name.isNotEmpty) _userName = name;

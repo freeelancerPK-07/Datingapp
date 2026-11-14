@@ -285,11 +285,12 @@ class ApiService {
 
   Future<Map<String, dynamic>> checkIncomingCall({String? userId, String? creatorId}) async {
     try {
-      final query = userId != null ? 'userId=$userId' : 'creatorId=$creatorId';
+      final id = (userId != null && userId.isNotEmpty) ? userId : (creatorId ?? '');
+      final query = 'userId=$id&creatorId=$id';
       final res = await http.get(
         Uri.parse('$baseUrl/calls/incoming?$query'),
         headers: _headers,
-      );
+      ).timeout(const Duration(seconds: 4));
       return jsonDecode(res.body);
     } catch (e) {
       debugPrint('[ApiService] Check incoming call error: $e');
